@@ -1,0 +1,2264 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตารางโหลดร้านค้า / สำนักงาน</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for Thai Language -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* ===== Design tokens (ชุดเดียวกับ index / condo-page-1 / condo-page-2) ===== */
+        :root {
+            --primary-navy: #0F2027;
+            --secondary-navy: #203A43;
+            --accent-orange: #FF6B35;
+            --hover-orange: #E85A24;
+            --bg-light: #F4F7F9;
+            --card-bg: #FFFFFF;
+            --text-dark: #2C3E50;
+            --text-light: #6C7A89;
+            --table-line: #1f2937;
+            --table-head: #F8FAFC;
+            --field-bg: #F1F5F9;
+            --field-hover: #CBD5E0;
+            --danger-red: #C53030;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: 'Prompt', 'Sarabun', sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ===== ส่วนหัว ===== */
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-navy), var(--secondary-navy));
+            color: #fff;
+            padding: 1.4rem 1.25rem;
+            border-bottom: 4px solid var(--accent-orange);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .page-header-inner {
+            max-width: 1700px;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-header h1 {
+            margin: 0;
+            font-size: 1.45rem;
+            font-weight: 600;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .page-header h1 > i { color: var(--accent-orange); }
+
+        .phase-chip {
+            background: var(--accent-orange);
+            color: #fff;
+            font-size: 0.78rem;
+            font-weight: 500;
+            padding: 0.15rem 0.7rem;
+            border-radius: 999px;
+        }
+
+        #roomInfo {
+            margin-top: 0.35rem;
+            font-size: 0.9rem;
+            font-weight: 300;
+            color: #CBD5E1;
+        }
+
+        #roomInfo strong { color: #fff; font-weight: 500; }
+
+        .restore-note {
+            margin-top: 0.25rem;
+            font-size: 0.8rem;
+            color: #FFD2BF;
+        }
+
+        .header-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+        }
+
+        .hbtn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1.1rem;
+            border-radius: 8px;
+            font-family: 'Prompt', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+
+        .hbtn-primary { background: var(--accent-orange); color: #fff; }
+        .hbtn-primary:hover { background: var(--hover-orange); }
+
+        .hbtn-ghost { background: transparent; color: #fff; border-color: rgba(255, 255, 255, 0.45); }
+        .hbtn-ghost:hover { background: rgba(255, 255, 255, 0.1); border-color: #fff; }
+
+        .hbtn:focus-visible,
+        .row-btn:focus-visible {
+            outline: 3px solid var(--accent-orange);
+            outline-offset: 2px;
+        }
+
+        /* ===== เนื้อหา ===== */
+        .page-main {
+            flex: 1;
+            width: 100%;
+            max-width: 1700px;
+            margin: 1.5rem auto;
+            padding: 0 1rem;
+        }
+
+        .sheet-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid #EEF2F6;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            padding: 1.5rem;
+        }
+
+        .section-header-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--secondary-navy);
+        }
+
+        .section-header-title i { color: var(--accent-orange); }
+
+        /* ตาราง 2 ฝั่งวางติดกันเสมอ ถ้าจอไม่พอให้เลื่อนแนวนอนทั้งคู่ไปด้วยกัน */
+        .tables-row {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 1.5rem;
+            align-items: flex-start;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+
+        .tables-row > .table-block {
+            flex: none;
+            overflow: visible;
+        }
+
+        /* เลื่อนแนวนอนเฉพาะในกรอบตาราง ไม่ใช่ทั้งหน้า */
+        .table-block {
+            max-width: 100%;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .summary-block {
+            margin-top: 2rem;
+            width: fit-content;        /* หัวข้ออยู่กึ่งกลางตารางของตัวเอง */
+        }
+
+        /* ===== ตาราง: กว้างตามเนื้อหา (ไม่ fix ความกว้างคอลัมน์) ===== */
+        .sheet-table {
+            border-collapse: collapse;
+            width: auto;
+            table-layout: auto;
+            background-color: #fff;
+            text-transform: uppercase;
+            font-family: 'Sarabun', sans-serif;
+        }
+
+        .sheet-table th,
+        .sheet-table td {
+            border: 1px solid var(--table-line);
+            padding: 4px 8px;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 0.9rem;
+            white-space: nowrap;      /* ไม่ตัดบรรทัด แถวซ้าย-ขวาจึงสูงเท่ากัน */
+        }
+
+        .sheet-table thead th,
+        .sheet-table thead td {
+            background-color: var(--table-head);
+            font-weight: 600;
+            height: 34px;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .sheet-table tbody td { height: 44px; }
+
+        .sheet-table .num-cell {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            min-width: 64px;
+            padding-right: 12px;
+        }
+
+        .sheet-table .total-head { padding: 4px 16px; }
+
+        #totalVaSum {
+            font-weight: 600;
+            color: var(--primary-navy);
+        }
+
+        /* ===== ช่องกรอกในตาราง ===== */
+        .cell-input,
+        .cell-select {
+            border: 1px solid transparent;
+            outline: none;
+            background-color: var(--field-bg);
+            color: var(--text-dark);
+            font-family: inherit;
+            font-size: 0.9rem;
+            padding: 4px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+        }
+
+        .cell-input {
+            display: inline-block;
+            min-width: 3ch;
+            text-align: center;
+        }
+
+        .cell-input[type="number"] {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+
+        .cell-input::-webkit-outer-spin-button,
+        .cell-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            appearance: none;
+            margin: 0;
+        }
+
+        .cell-input:hover:not(:disabled),
+        .cell-select:hover:not(:disabled) {
+            border-color: var(--field-hover);
+        }
+
+        .cell-input:focus,
+        .cell-select:focus {
+            background-color: #fff;
+            border-color: var(--accent-orange);
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);
+        }
+
+        .cell-input:disabled,
+        .cell-select:disabled {
+            background-color: #E2E8F0;
+            color: var(--text-light);
+            cursor: not-allowed;
+            opacity: 0.55;
+        }
+
+        .cell-select {
+            width: auto;               /* กว้างตามตัวเลือกที่ยาวที่สุด */
+            cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+            text-align: left;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236C7A89' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 12px;
+            padding-right: 26px;
+        }
+
+        .cell-select-pill {
+            border-radius: 999px;
+            padding-left: 12px;
+        }
+
+        /* DESCRIPTION ที่ผู้ใช้พิมพ์เอง */
+        .cell-input.custom-desc {
+            text-align: left;
+            background-color: #fff;
+            border-color: var(--field-hover);
+            border-bottom: 2px solid var(--accent-orange);
+            font-weight: 500;
+        }
+
+        /* ===== ปุ่มเพิ่ม/ลบแถว (คอลัมน์นอกตาราง) ===== */
+        .sheet-table td.action-cell,
+        .sheet-table th.action-cell {
+            border: none !important;
+            background: transparent !important;
+        }
+
+        .row-actions {
+            display: flex;
+            gap: 0.35rem;
+            padding-left: 0.25rem;
+        }
+
+        .row-btn {
+            font-family: 'Prompt', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 0.3rem 0.65rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .row-btn.add {
+            background: var(--secondary-navy);
+            color: #fff;
+            border: 1px solid var(--secondary-navy);
+        }
+
+        .row-btn.add:hover {
+            background: var(--accent-orange);
+            border-color: var(--accent-orange);
+        }
+
+        .row-btn.del {
+            background: #fff;
+            color: var(--danger-red);
+            border: 1px solid #FEB2B2;
+        }
+
+        .row-btn.del:hover { background: #FFF5F5; }
+
+        /* ===== เกณฑ์โหลดห้องชุดตามพื้นที่ (วสท.) ===== */
+        /* ===== แจ้งบันทึกสำเร็จ ===== */
+        .save-toast {
+            position: fixed;
+            right: 1.25rem;
+            bottom: 1.25rem;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: var(--secondary-navy);
+            color: #fff;
+            padding: 0.8rem 1.1rem;
+            border-radius: 10px;
+            border-left: 4px solid var(--accent-orange);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            font-size: 0.9rem;
+        }
+
+        .save-toast[hidden] { display: none; }
+        .save-toast i { color: #9AE6B4; }
+        .save-toast a { color: #FFD2BF; font-weight: 500; }
+
+        /* ===== เกณฑ์โหลดห้องชุดตามพื้นที่ (วสท.) ===== */
+        /* ===== จำนวนห้องร้านค้า / สำนักงาน (แก้ไขได้) ===== */
+        .rc-unit { font-size: 0.9rem; color: var(--text-light); }
+        .rc-total { color: var(--text-light); }
+        .rc-total.saved { border-color: #9AE6B4; background: #F0FFF4; color: var(--text-dark); }
+        .rc-total.error { border-color: #FEB2B2; background: #FFF5F5; color: var(--danger-red); }
+        .eit-field.missing .eit-area input { border-color: var(--danger-red); background: #FFF5F5; }
+
+        .eit-panel {
+            margin-bottom: 1.5rem;
+            padding: 1rem 1.25rem 1.1rem;
+            background: var(--bg-light);
+            border: 1px solid #DCE3E8;
+            border-left: 4px solid var(--accent-orange);
+            border-radius: 12px;
+        }
+
+        .eit-title {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            color: var(--secondary-navy);
+            margin-bottom: 0.85rem;
+        }
+
+        .eit-title i { color: var(--accent-orange); }
+        .eit-title .req-note { font-size: 0.78rem; font-weight: 400; color: var(--danger-red); }
+
+        .eit-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem 2rem;
+            align-items: flex-start;
+        }
+
+        .eit-field {
+            margin: 0;
+            padding: 0;
+            border: none;
+            min-width: 0;
+        }
+
+        .eit-field > label,
+        .eit-field > legend {
+            display: block;
+            padding: 0;
+            margin-bottom: 0.4rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        .eit-field .req { color: var(--danger-red); }
+
+        .eit-area {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .eit-area input {
+            width: 8.5rem;
+            font-family: 'Sarabun', sans-serif;
+            font-size: 1rem;
+            padding: 0.4rem 0.6rem;
+            text-align: right;
+            border: 1px solid #C9D3DA;
+            border-radius: 8px;
+            background: #fff;
+            color: var(--primary-navy);
+            outline: none;
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+
+        .eit-area input::-webkit-outer-spin-button,
+        .eit-area input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            appearance: none;
+            margin: 0;
+        }
+
+        .eit-area input:focus {
+            border-color: var(--accent-orange);
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);
+        }
+
+        .eit-area span { font-size: 0.9rem; color: var(--text-light); }
+
+        /* ตัวเลือกแบบปุ่มคู่ (radio) */
+        .seg {
+            display: inline-flex;
+            border: 1px solid #C9D3DA;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .seg label {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .seg input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .seg span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.45rem 0.9rem;
+            font-size: 0.88rem;
+            color: var(--text-dark);
+            transition: background-color 0.15s, color 0.15s;
+            white-space: nowrap;
+        }
+
+        .seg label + label span { border-left: 1px solid #C9D3DA; }
+        .seg label:hover span { background: var(--field-bg); }
+        .seg input:checked + span { background: var(--secondary-navy); color: #fff; }
+        .seg input:focus-visible + span { outline: 3px solid var(--accent-orange); outline-offset: -3px; }
+
+        .eit-field.missing .seg,
+        .eit-field.missing .eit-area input { border-color: var(--danger-red); }
+
+        .eit-result {
+            margin-top: 0.9rem;
+            padding: 0.6rem 0.85rem;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            line-height: 1.65;
+            background: #fff;
+            border: 1px solid #DCE3E8;
+        }
+
+        .eit-result strong { color: var(--primary-navy); }
+        .eit-result .formula { font-family: 'Sarabun', sans-serif; font-weight: 600; color: var(--primary-navy); }
+        .eit-result.pending { color: var(--text-light); }
+        .eit-result.ok { border-color: #9AE6B4; background: #F0FFF4; }
+        .eit-result.raised { border-color: #F5D78E; background: #FFF8E6; }
+        .eit-result.area { border-color: #FFC9B3; background: #FFF4EF; }
+
+        /* คำนวณตามพื้นที่: ไม่ต้องกรอกวงจรย่อย */
+        body.area-mode .tables-row,
+        body.area-mode .add-group-bar { display: none; }
+        body.area-mode .summary-block { margin-top: 0; }
+
+        /* ===== ค่าที่โปรแกรมคำนวณให้ (CB AT / SIZE) ===== */
+        .cell-input.auto-calc {
+            background-color: transparent;
+            border-color: transparent;
+            font-weight: 600;
+            color: var(--primary-navy);
+            cursor: default;
+        }
+
+        .cell-input.auto-calc:hover { border-color: transparent; }
+        .cell-input.auto-calc:focus { box-shadow: none; border-color: transparent; }
+        .cell-input.auto-calc.over { color: var(--danger-red); }
+        .cell-select.over { color: var(--danger-red); font-weight: 600; }
+
+        .sizing-note {
+            margin-top: 0.5rem;
+            font-size: 0.78rem;
+            color: var(--text-light);
+            line-height: 1.6;
+            width: 0;
+            min-width: 100%;
+        }
+
+        /* ===== ส่วนท้าย ===== */
+        .page-footer {
+            text-align: center;
+            padding: 1.25rem;
+            background-color: var(--primary-navy);
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .page-footer p { margin: 0; }
+
+        @media (max-width: 600px) {
+            .page-header h1 { font-size: 1.2rem; }
+            .sheet-card { padding: 1rem; }
+        }
+
+        /* ===== พิมพ์ ===== */
+        @media print {
+            .no-print { display: none !important; }
+            body { background: #fff; }
+            .page-main { margin: 0; padding: 0; max-width: 100%; }
+            .sheet-card { box-shadow: none !important; border: none !important; padding: 0 !important; }
+            .table-block { overflow: visible; }
+            .sheet-table th, .sheet-table td { border: 1px solid #000 !important; }
+            .sheet-table td.action-cell,
+            .sheet-table th.action-cell { border: none !important; }
+            .cell-input, .cell-select {
+                background: transparent !important;
+                border-color: transparent !important;
+                box-shadow: none !important;
+            }
+            .cell-select { background-image: none !important; padding-right: 8px; }
+        }
+        .sheet-table th.meter-head { background: #EEF2F6; }
+    </style>
+</head>
+<body>
+
+    <!-- ส่วนหัว (ธีมเดียวกับหน้าอื่น) -->
+    <header class="page-header no-print">
+        <div class="page-header-inner">
+            <div>
+                <h1>
+                    <i class="fa-solid fa-store"></i> ตารางคำนวณโหลดร้านค้า / สำนักงาน
+                    <span class="phase-chip">1 เฟส</span>
+                </h1>
+                <!-- ข้อมูลห้องที่ผู้ใช้กำหนดจาก condo-page-1 -->
+                <div id="roomInfo"></div>
+                <div id="restoreNote"></div>
+            </div>
+            <div class="header-actions">
+                <button type="button" onclick="createLoadSchedule()" class="hbtn hbtn-primary">
+                    <i class="fa-solid fa-floppy-disk"></i> บันทึกตารางโหลด
+                </button>
+                <!-- ปุ่มลัดไปหน้าสรุปผลการคำนวณ (href ใส่ projectId ให้ตอนโหลดหน้า) -->
+                <a id="summaryLink" href="../condo/condo-page-2.html" class="hbtn hbtn-ghost">
+                    <i class="fa-solid fa-file-invoice"></i> ไปหน้าสรุปผล
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="page-main">
+    <div class="sheet-card container-box">
+
+        <!-- จำนวนห้องของร้านค้า / สำนักงานรายการนี้ (แก้แล้วบันทึกทันที) -->
+        <section class="eit-panel no-print" id="unitCountPanel" hidden>
+            <div class="eit-title">
+                <i class="fa-solid fa-store"></i> จำนวนห้อง <span id="unitCountName"></span>
+                <span class="req-note" style="color: var(--text-light)">แก้ไขแล้วบันทึกทันที</span>
+            </div>
+            <div class="eit-grid">
+                <div class="eit-field" id="ucField">
+                    <label for="ucInput" id="ucLabel">จำนวนห้อง</label>
+                    <div class="eit-area">
+                        <input type="number" id="ucInput" min="1" step="1" oninput="onUnitCountChange(this)" />
+                        <span class="rc-unit">ห้อง</span>
+                    </div>
+                </div>
+            </div>
+            <div class="eit-result rc-total" id="unitCountTotal" aria-live="polite"></div>
+        </section>
+
+        <!-- โหลดห้องชุดประเภทสำนักงานหรือร้านค้าทั่วไป ตามพื้นที่ (วสท.) -->
+        <section class="eit-panel" id="eitPanel">
+            <div class="eit-title">
+                <i class="fa-solid fa-ruler-combined"></i> โหลดห้องชุดประเภทสำนักงานหรือร้านค้าทั่วไป ตามพื้นที่ (วสท.)
+                <span class="req-note">* จำเป็นต้องกรอก</span>
+            </div>
+            <div class="eit-grid">
+                <div class="eit-field" id="areaField">
+                    <label for="roomArea">พื้นที่ห้อง <span class="req">*</span></label>
+                    <div class="eit-area">
+                        <input type="number" id="roomArea" min="0" step="0.01" placeholder="เช่น 54" oninput="onEitChange()" />
+                        <span>m²</span>
+                    </div>
+                </div>
+                <fieldset class="eit-field" id="coolingField">
+                    <legend>ระบบทำความเย็นจากส่วนกลาง <span class="req">*</span></legend>
+                    <div class="seg">
+                        <label><input type="radio" name="centralCooling" value="no" onchange="onEitChange()" /><span>ไม่มี</span></label>
+                        <label><input type="radio" name="centralCooling" value="yes" onchange="onEitChange()" /><span>มี</span></label>
+                    </div>
+                </fieldset>
+                <fieldset class="eit-field">
+                    <legend>วิธีคำนวณโหลด</legend>
+                    <div class="seg">
+                        <label><input type="radio" name="calcMethod" value="circuit" checked onchange="onEitChange()" /><span><i class="fa-solid fa-list-ol"></i> ตามวงจรย่อย</span></label>
+                        <label><input type="radio" name="calcMethod" value="area" onchange="onEitChange()" /><span><i class="fa-solid fa-ruler-combined"></i> ตามพื้นที่ (วสท.)</span></label>
+                    </div>
+                </fieldset>
+            </div>
+            <div class="eit-result pending" id="eitResult" aria-live="polite"></div>
+        </section>
+
+        <!-- Main Schedule Table Area Split into Two Tables -->
+        <div class="tables-row">
+            
+            <!-- Left Table: ส่วนผู้ใช้กำหนด -->
+            <div class="table-block">
+                <div class="section-header-title"><i class="fa-solid fa-pen-to-square"></i> ส่วนผู้ใช้กำหนด</div>
+                <table class="sheet-table" id="userDefinedTable">
+                    <thead>
+                        <tr>
+                            <th rowspan="2">CIRCUIT NO.</th>
+                            <th rowspan="2">DESCRIPTION</th>
+                            <th rowspan="2">LOAD (VA)</th>
+                            <th colspan="3">LOAD (WATT)</th>
+                            <th rowspan="2">CB. TYPE</th>
+                        </tr>
+                        <tr>
+                            <th>WATT</th>
+                            <th>PF.</th>
+                            <th>VA</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTbody">
+                        <!-- Circuit Row 1 -->
+                        <tr class="circuit-row-user">
+                            <td class="circuit-num">1</td>
+                            <td>
+                                <div class="desc-container">
+                                    <select class="cell-select cell-select-pill desc-select" onchange="handleDescChange(this)">
+                                        <option value="" selected>-</option>
+                                        <option value="แสงสว่าง">แสงสว่าง</option>
+                                        <option value="เต้ารับ">เต้ารับ</option>
+                                        <option value="แอร์">แอร์</option>
+                                        <option value="เครื่องทำน้ำอุ่น">เครื่องทำน้ำอุ่น</option>
+                                        <option value="ป้ายโฆษณา">ป้ายโฆษณา</option>
+                                        <option value="อุปกรณ์สำนักงาน">อุปกรณ์สำนักงาน</option>
+                                        <option value="SPARE">SPARE</option>
+                                        <option value="ผู้ใช้กำหนดเอง">ผู้ใช้กำหนดเอง</option>
+                                    </select>
+                                </div>
+                            </td>
+                            <td>
+                                <input type="number" class="cell-input direct-va" oninput="handleInputMode(this, 'va')" />
+                            </td>
+                            <td>
+                                <input type="number" class="cell-input watt-input" step="10" oninput="handleInputMode(this, 'watt')" />
+                            </td>
+                            <td>
+                                <select class="cell-select cell-select-pill pf-select" onchange="calculateRow(this)">
+                                    <option value="1.0" selected>1</option>
+                                    <option value="0.9">0.9</option>
+                                    <option value="0.8">0.8</option>
+                                    <option value="0.7">0.7</option>
+                                    <option value="0.6">0.6</option>
+                                    <option value="0.5">0.5</option>
+                                </select>
+                            </td>
+                            <td class="calculated-va num-cell">0</td>
+                            <td>
+                                <select class="cell-select cell-select-pill cb-type-select">
+                                    <option value="">-</option>
+                                    <option value="RCBO">RCBO</option>
+                                    <option value="RCCD">RCCD</option>
+                                    <option value="MCB" selected>MCB</option>
+                                </select>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Right Table: ส่วนโปรแกรมสรุปผล -->
+            <div class="table-block">
+                <div class="section-header-title"><i class="fa-solid fa-calculator"></i> ส่วนโปรแกรมสรุปผล</div>
+                <table class="sheet-table" id="programResultTable">
+                    <thead>
+                        <tr>
+                            <th rowspan="2">VA</th>
+                            <th colspan="2">CB</th>
+                            <th colspan="4">CONDUCTOR</th>
+                            <th colspan="2">RACE WAY</th>
+                            <th class="action-cell no-print" rowspan="2"></th>
+                        </tr>
+                        <tr>
+                            <th>P.</th>
+                            <th>AT</th>
+                            <th>TYPE</th>
+                            <th>แกน</th>
+                            <th>กลุ่มการติดตั้ง</th>
+                            <th>SIZE</th>
+                            <th>TYPE</th>
+                            <th>Ø</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultTbody">
+                        <!-- Circuit Result Row 1 -->
+                        <tr class="circuit-row-result">
+                            <td class="row-va-summary num-cell">0</td>
+                            <td>
+                                <input type="text" class="cell-input cb-p auto-calc" value="1" readonly title="เบรกเกอร์ลูกย่อย 1 Pole" />
+                            </td>
+                            <td>
+                                <select class="cell-select cell-select-pill cb-at" title="เลือกได้ตั้งแต่ขนาดที่คำนวณได้ขึ้นไป"></select>
+                            </td>
+                            <td>
+                                <select class="cell-select cell-select-pill cond-type">
+                                    <option value="IEC01" selected>IEC01</option>
+                                </select>
+                            </td>
+                            <td>
+                                <select class="cell-select cell-select-pill cond-core" title="ลักษณะตัวนำ (ตาราง 5-20)">
+                                    <option value="single" selected>แกนเดียว</option>
+                                    <option value="multi">หลายแกน</option>
+                                </select>
+                            </td>
+                            <td>
+                                <select class="cell-select cell-select-pill cond-group">
+                                    <option value="1" selected>1</option>
+                                    <option value="2">2</option>
+                                </select>
+                            </td>
+                            <td>
+                                <input type="text" class="cell-input cond-size auto-calc" value="" readonly />
+                            </td>
+                            <td>
+                                <select class="cell-select cell-select-pill race-type">
+                                    <option value="">-</option>
+                                    <option value="IMC">IMC</option>
+                                    <option value="EMT">EMT</option>
+                                    <option value="PVC" selected>PVC</option>
+                                </select>
+                            </td>
+                            <td>
+                                <select class="cell-select cell-select-pill race-size" title="ขนาดท่อตามตาราง 8.4 เลือกได้ตั้งแต่ขนาดที่คำนวณได้ขึ้นไป"></select>
+                            </td>
+                            <td class="action-cell no-print">
+                                <div class="row-actions">
+                                    <button type="button" onclick="addRow()" class="row-btn add" title="เพิ่มวงจร">
+                                        เพิ่ม
+                                    </button>
+                                    <button type="button" onclick="removeRow(this)" class="row-btn del" title="ลบแถว">
+                                        ลบ
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+
+        <!-- Bottom Summary Section ("ส่วนโปรแกรมสรุปผล") -->
+        <div class="table-block summary-block">
+            <div class="section-header-title"><i class="fa-solid fa-clipboard-list"></i> สรุปรวม (MAIN)</div>
+            <table class="sheet-table" id="summaryTable">
+                <thead>
+                    <tr>
+                        <td rowspan="2" class="total-head">
+                            TOTAL LOAD (VA)
+                        </td>
+                        <th colspan="3">CB</th>
+                        <th colspan="4">CONDUCTOR</th>
+                        <th colspan="2">RACE WAY</th>
+                        <th colspan="2" class="meter-head">METER</th>
+                    </tr>
+                    <tr>
+                        <th>TYPE</th>
+                        <th>P.</th>
+                        <th>AT</th>
+                        <th>TYPE</th>
+                        <th>แกน</th>
+                        <th>กลุ่มการติดตั้ง</th>
+                        <th>SIZE</th>
+                        <th>TYPE</th>
+                        <th>Ø</th>
+                        <th class="meter-head">A</th>
+                        <th class="meter-head">CB.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="num-cell" id="totalVaSum">0</td>
+                        <td>
+                            <select id="mainCbType" class="cell-select cell-select-pill">
+                                <option value="" selected>-</option>
+                                <option value="MCCB">MCCB</option>
+                                <option value="MCB">MCB</option>
+                                <option value="RCBO">RCBO</option>
+                                <option value="RCCD">RCCD</option>
+                            </select>
+                        </td>
+                        <td><input type="text" id="mainCbP" class="cell-input" value="2" title="จำนวน Pole ของเมนเซอร์กิตเบรกเกอร์" /></td>
+                        <td><select id="mainCbAt" class="cell-select cell-select-pill" title="เลือกได้ตั้งแต่ขนาดที่คำนวณได้ขึ้นไป"></select></td>
+                        <td>
+                            <select id="mainCondType" class="cell-select cell-select-pill">
+                                <option value="IEC01" selected>IEC01</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="mainCondCore" class="cell-select cell-select-pill" title="ลักษณะตัวนำ (ตาราง 5-20)">
+                                <option value="single" selected>แกนเดียว</option>
+                                <option value="multi">หลายแกน</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="mainCondGroup" class="cell-select cell-select-pill">
+                                <option value="1" selected>1</option>
+                                <option value="2">2</option>
+                            </select>
+                        </td>
+                        <td><input type="text" id="mainCondSize" class="cell-input auto-calc" value="" readonly /></td>
+                        <td>
+                            <select id="mainRaceType" class="cell-select cell-select-pill">
+                                <option value="" selected>-</option>
+                                <option value="IMC">IMC</option>
+                                <option value="EMT">EMT</option>
+                                <option value="PVC">PVC</option>
+                            </select>
+                        </td>
+                        <td><select id="mainRaceSize" class="cell-select cell-select-pill" title="ขนาดท่อตามตาราง 8.4 เลือกได้ตั้งแต่ขนาดที่คำนวณได้ขึ้นไป"></select></td>
+                        <td><select id="meterSize" class="cell-select cell-select-pill" title="ขนาดมิเตอร์ (A)"></select></td>
+                        <td><select id="meterCb" class="cell-select cell-select-pill" title="CB. ของมิเตอร์ (A)"></select></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="sizing-note no-print">
+                CB AT: I = VA / 230 โปรแกรมเลือกขนาดเล็กที่สุดที่ไม่น้อยกว่า I ให้ก่อน และเลือกขนาดที่ใหญ่กว่าได้ (เล็กกว่าไม่ได้)
+                · ลูกย่อย 1P (10, 16, 20, 25, 32, 40, 50, 63 A) · เมน (16, 20, 32, 40, 50, 63 A) จาก TOTAL LOAD<br>
+                SIZE: สายไฟตามตาราง 5-20 (2 ตัวนำ, รับกระแสได้ไม่น้อยกว่า AT, เริ่มที่ 2.5 ตร.มม.)
+                · สายดินตามตาราง 4-2 (เริ่มที่ 2.5 ตร.มม.) · รูปแบบ 2-ขนาดสาย,ขนาดสายดินG<br>
+                RACE WAY Ø: ตาราง 8.4 (สาย 60227 IEC 01 ขนาดเดียวกันในท่อ พื้นที่สาย 40%) ใช้กับ IMC / EMT / PVC
+                · ระบบ 1 เฟส คิดสาย 3 เส้นทุกวงจร (L, N, G) ใช้ขนาดสายเส้นไฟ · เลือกท่อใหญ่กว่าได้ (เล็กกว่าไม่ได้)
+            <br>
+                METER (<span id="meterUtility"></span>): กฟน. ขนาดมิเตอร์ตาราง 9-3 (พื้นที่ + โหลดสูงสุดของเครื่องวัดฯ) · CB. ตาราง 3-4
+                · กฟภ. ขนาดมิเตอร์ตาราง 9-4 (พื้นที่ + พิกัดสูงสุดของเครื่องป้องกันฯ, มิเตอร์จานหมุน / อิเล็กทรอนิกส์) · CB. ตาราง 3-5 ไม่เกินพิกัดสูงสุดในตาราง 9-4
+                · ใช้ตารางตามเขตการไฟฟ้าที่เลือกตอนสร้างโปรเจกต์เท่านั้น (ไม่ใช้ปนกัน) · เลือกขนาดใหญ่กว่าได้
+            </div>
+        </div>
+
+    </div>
+    </main>
+
+    <div id="saveToast" class="save-toast no-print" role="status" aria-live="polite" hidden>
+        <i class="fa-solid fa-circle-check"></i>
+        <span id="toastText">บันทึกตารางโหลดแล้ว</span>
+        <a id="toastSummaryLink" href="../condo/condo-page-2.html">ไปหน้าสรุปผล</a>
+    </div>
+
+    <footer class="page-footer no-print">
+        <p>&copy; ระบบคำนวณโหลดไฟฟ้าอาคารชุด</p>
+    </footer>
+
+    <!-- Application Script Logic -->
+    <script>
+        // Handle Circuit Description Selection Change
+        // CB TYPE อัตโนมัติ: เครื่องทำน้ำอุ่น / เต้ารับ = RCBO · โหลดอื่น = MCB
+        const RCBO_LOADS = ['เครื่องทำน้ำอุ่น', 'เต้ารับ'];
+        function autoCbType(userRow) {
+            const sel = userRow && userRow.querySelector('.cb-type-select');
+            if (!sel) return;
+            sel.value = RCBO_LOADS.includes(getRowDescription(userRow)) ? 'RCBO' : 'MCB';
+            delete sel.dataset.manual;
+        }
+
+        // ผู้ใช้เปลี่ยน CB TYPE เอง -> จำไว้ (บันทึกแล้วเปิดใหม่ไม่ถูกเปลี่ยนกลับ)
+        document.addEventListener('change', e => {
+            if (e.target.matches('#userTbody .cb-type-select')) e.target.dataset.manual = '1';
+        });
+
+        function handleDescChange(selectEl) {
+            autoCbType(selectEl.closest('tr'));
+            if (selectEl.value === 'ผู้ใช้กำหนดเอง') {
+                const container = selectEl.closest('.desc-container');
+                container.innerHTML = `
+                    <input type="text" class="cell-input custom-desc" 
+                           placeholder="พิมพ์ระบุโหลด..." autofocus onblur="checkCustomDescEmpty(this)" />
+                `;
+            } else {
+                calculateRow(selectEl);
+            }
+        }
+
+        // Reset Custom Desc Input back to Dropdown if Empty
+        function checkCustomDescEmpty(inputEl) {
+            if (!inputEl.value.trim()) {
+                const container = inputEl.closest('.desc-container');
+                container.innerHTML = `
+                    <select class="cell-select cell-select-pill desc-select" onchange="handleDescChange(this)">
+                        <option value="" selected>-</option>
+                        <option value="แสงสว่าง">แสงสว่าง</option>
+                        <option value="เต้ารับ">เต้ารับ</option>
+                        <option value="แอร์">แอร์</option>
+                        <option value="เครื่องทำน้ำอุ่น">เครื่องทำน้ำอุ่น</option>
+                        <option value="ป้ายโฆษณา">ป้ายโฆษณา</option>
+                        <option value="อุปกรณ์สำนักงาน">อุปกรณ์สำนักงาน</option>
+                        <option value="SPARE">SPARE</option>
+                        <option value="ผู้ใช้กำหนดเอง">ผู้ใช้กำหนดเอง</option>
+                    </select>
+                `;
+            }
+        }
+
+        // Mutual Exclusion Input Handler (LOAD VA vs LOAD WATT)
+        function handleInputMode(element, mode) {
+            const userRow = element.closest('tr');
+            if (!userRow) return;
+
+            const directVaInput = userRow.querySelector('.direct-va');
+            const wattInput = userRow.querySelector('.watt-input');
+            const pfSelect = userRow.querySelector('.pf-select');
+
+            if (mode === 'va') {
+                if (directVaInput.value.trim() !== '') {
+                    wattInput.value = '';
+                    wattInput.disabled = true;
+                    pfSelect.disabled = true;
+                } else {
+                    wattInput.disabled = false;
+                    pfSelect.disabled = false;
+                }
+            } else if (mode === 'watt') {
+                if (wattInput.value.trim() !== '') {
+                    directVaInput.value = '';
+                    directVaInput.disabled = true;
+                } else {
+                    directVaInput.disabled = false;
+                }
+            }
+
+            autosizeInput(directVaInput);
+            autosizeInput(wattInput);
+            calculateRow(element);
+        }
+
+        // Calculate VA for a specific row across both left & right tables
+        function calculateRow(element) {
+            const userRow = element.closest('tr');
+            if (!userRow) return;
+
+            const tbodyUser = document.getElementById('userTbody');
+            const rowIndex = Array.from(tbodyUser.children).indexOf(userRow);
+            
+            const tbodyResult = document.getElementById('resultTbody');
+            const resultRow = tbodyResult.children[rowIndex];
+
+            if (!resultRow) return;
+
+            const directVaInput = userRow.querySelector('.direct-va');
+            const wattInput = userRow.querySelector('.watt-input');
+            const pfSelect = userRow.querySelector('.pf-select');
+            const calculatedVaTd = userRow.querySelector('.calculated-va');
+            const rowVaSummaryTd = resultRow.querySelector('.row-va-summary');
+
+            let vaValue = 0;
+
+            const directVa = parseFloat(directVaInput.value);
+            const watt = parseFloat(wattInput.value);
+            const pf = parseFloat(pfSelect.value) || 1.0;
+
+            if (!isNaN(directVa) && directVa > 0 && !directVaInput.disabled) {
+                vaValue = directVa;
+            } else if (!isNaN(watt) && watt >= 0 && !wattInput.disabled) {
+                vaValue = Math.round(watt / pf);
+            }
+
+            calculatedVaTd.textContent = vaValue > 0 ? vaValue.toLocaleString() : '0';
+            rowVaSummaryTd.textContent = vaValue > 0 ? vaValue.toLocaleString() : '0';
+            updateBranchSizing(resultRow, vaValue);
+
+            calculateTotalLoad();
+        }
+
+        // TOTAL LOAD (VA) = ผลรวมวงจรย่อย (ไม่น้อยกว่าเกณฑ์ วสท.) หรือโหลดตามพื้นที่
+        function calculateTotalLoad() {
+            const d = designLoad();
+            document.getElementById('totalVaSum').textContent = d.total.toLocaleString();
+            renderEit(d);
+            updateMainSizing(d.total);
+        }
+
+        // Re-calculate all rows
+        function calculateAll() {
+            const userRows = document.querySelectorAll('#userTbody .circuit-row-user');
+            userRows.forEach(row => {
+                const wattInput = row.querySelector('.watt-input');
+                if (wattInput) calculateRow(wattInput);
+            });
+        }
+
+        // Dynamic Circuit Row Addition
+        function addRow() {
+            const userTbody = document.getElementById('userTbody');
+            const resultTbody = document.getElementById('resultTbody');
+
+            const nextCircuitNo = (userTbody.children.length + 1).toString();
+
+            // Append Left Table Row
+            const newUserRow = document.createElement('tr');
+            newUserRow.className = 'circuit-row-user';
+            newUserRow.innerHTML = `
+                <td class="circuit-num">${nextCircuitNo}</td>
+                <td>
+                    <div class="desc-container">
+                        <select class="cell-select cell-select-pill desc-select" onchange="handleDescChange(this)">
+                            <option value="" selected>-</option>
+                            <option value="แสงสว่าง">แสงสว่าง</option>
+                            <option value="เต้ารับ">เต้ารับ</option>
+                            <option value="แอร์">แอร์</option>
+                            <option value="เครื่องทำน้ำอุ่น">เครื่องทำน้ำอุ่น</option>
+                            <option value="ป้ายโฆษณา">ป้ายโฆษณา</option>
+                            <option value="อุปกรณ์สำนักงาน">อุปกรณ์สำนักงาน</option>
+                            <option value="SPARE">SPARE</option>
+                            <option value="ผู้ใช้กำหนดเอง">ผู้ใช้กำหนดเอง</option>
+                        </select>
+                    </div>
+                </td>
+                <td><input type="number" class="cell-input direct-va" oninput="handleInputMode(this, 'va')" /></td>
+                <td><input type="number" class="cell-input watt-input" step="10" oninput="handleInputMode(this, 'watt')" /></td>
+                <td>
+                    <select class="cell-select cell-select-pill pf-select" onchange="calculateRow(this)">
+                        <option value="1.0" selected>1</option>
+                        <option value="0.9">0.9</option>
+                        <option value="0.8">0.8</option>
+                        <option value="0.7">0.7</option>
+                        <option value="0.6">0.6</option>
+                        <option value="0.5">0.5</option>
+                    </select>
+                </td>
+                <td class="calculated-va num-cell">0</td>
+                <td>
+                    <select class="cell-select cell-select-pill cb-type-select">
+                        <option value="">-</option>
+                        <option value="RCBO">RCBO</option>
+                        <option value="RCCD">RCCD</option>
+                        <option value="MCB" selected>MCB</option>
+                    </select>
+                </td>
+            `;
+
+            // Append Right Table Row (Includes "กลุ่มการติดตั้ง" column)
+            const newResultRow = document.createElement('tr');
+            newResultRow.className = 'circuit-row-result';
+            newResultRow.innerHTML = `
+                <td class="row-va-summary num-cell">0</td>
+                <td><input type="text" class="cell-input cb-p auto-calc" value="1" readonly title="เบรกเกอร์ลูกย่อย 1 Pole" /></td>
+                <td><select class="cell-select cell-select-pill cb-at" title="เลือกได้ตั้งแต่ขนาดที่คำนวณได้ขึ้นไป"></select></td>
+                <td>
+                    <select class="cell-select cell-select-pill cond-type">
+                        <option value="IEC01" selected>IEC01</option>
+                    </select>
+                </td>
+                <td>
+                    <select class="cell-select cell-select-pill cond-core" title="ลักษณะตัวนำ (ตาราง 5-20)">
+                        <option value="single" selected>แกนเดียว</option>
+                        <option value="multi">หลายแกน</option>
+                    </select>
+                </td>
+                <td>
+                    <select class="cell-select cell-select-pill cond-group">
+                        <option value="1" selected>1</option>
+                        <option value="2">2</option>
+                    </select>
+                </td>
+                <td><input type="text" class="cell-input cond-size auto-calc" value="" readonly /></td>
+                <td>
+                    <select class="cell-select cell-select-pill race-type">
+                        <option value="">-</option>
+                        <option value="IMC">IMC</option>
+                        <option value="EMT">EMT</option>
+                        <option value="PVC" selected>PVC</option>
+                    </select>
+                </td>
+                <td><select class="cell-select cell-select-pill race-size" title="ขนาดท่อตามตาราง 8.4 เลือกได้ตั้งแต่ขนาดที่คำนวณได้ขึ้นไป"></select></td>
+                <td class="action-cell no-print">
+                    <div class="row-actions">
+                        <button type="button" onclick="addRow()" class="row-btn add" title="เพิ่มวงจร">
+                            เพิ่ม
+                        </button>
+                        <button type="button" onclick="removeRow(this)" class="row-btn del" title="ลบแถว">
+                            ลบ
+                        </button>
+                    </div>
+                </td>
+            `;
+
+            userTbody.appendChild(newUserRow);
+            resultTbody.appendChild(newResultRow);
+
+            updateCircuitNumbers();
+            calculateRow(newUserRow.querySelector('.watt-input'));
+        }
+
+        // Delete Synchronized Row from both tables
+        function removeRow(btn) {
+            const userTbody = document.getElementById('userTbody');
+            const resultTbody = document.getElementById('resultTbody');
+
+            if (userTbody.children.length <= 1) {
+                alert('ต้องมีอย่างน้อย 1 แถวในตาราง');
+                return;
+            }
+
+            const resultRow = btn.closest('tr');
+            const rowIndex = Array.from(resultTbody.children).indexOf(resultRow);
+
+            if (rowIndex !== -1) {
+                userTbody.children[rowIndex].remove();
+                resultTbody.children[rowIndex].remove();
+            }
+
+            updateCircuitNumbers();
+            calculateTotalLoad();
+        }
+
+        // Update Circuit Numbers Sequentially
+        function updateCircuitNumbers() {
+            const userRows = document.querySelectorAll('#userTbody .circuit-row-user');
+            userRows.forEach((row, idx) => {
+                const numTd = row.querySelector('.circuit-num');
+                if (numTd) numTd.textContent = (idx + 1).toString();
+            });
+        }
+
+        // On Load Initial Calculation
+        window.onload = function() {
+            setSummaryLink();
+            showRoomInfo();
+            restoreLoadSchedule();
+            restoreEitSettings();      // พื้นที่ / ระบบทำความเย็น / วิธีคำนวณ
+            calculateAll();
+            initAutosize();
+            renderUnitCount();         // จำนวนห้องของรายการนี้
+        };
+
+        // ===== ช่องกรอกยืดหดตามความยาวข้อความ =====
+        // ความกว้างขั้นต่ำของแต่ละช่อง (หน่วย: จำนวนตัวอักษร)
+        const AUTOSIZE_MIN_CH = {
+            'direct-va': 6, 'watt-input': 6, 'cb-p': 2, 'cb-at': 3,
+            'cond-size': 7, 'custom-desc': 12
+        };
+        const SUMMARY_MIN_CH = {
+            mainCbP: 2, mainCbAt: 3, mainCondSize: 7
+        };
+        const measureCtx = document.createElement('canvas').getContext('2d');
+
+        function minChFor(el) {
+            if (el.id && SUMMARY_MIN_CH[el.id]) return SUMMARY_MIN_CH[el.id];
+            for (const cls of el.classList) {
+                if (AUTOSIZE_MIN_CH[cls]) return AUTOSIZE_MIN_CH[cls];
+            }
+            return 4;
+        }
+
+        function autosizeInput(el) {
+            if (!(el instanceof HTMLInputElement) || !el.classList.contains('cell-input')) return;
+            const cs = getComputedStyle(el);
+            measureCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+            const text = (el.value || el.placeholder || '').toUpperCase();
+            const textWidth = measureCtx.measureText(text).width;
+            const minWidth = minChFor(el) * measureCtx.measureText('0').width;
+            const padding = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight)
+                          + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth) + 4;
+            el.style.width = Math.ceil(Math.max(textWidth, minWidth) + padding) + 'px';
+        }
+
+        function autosizeAll(root) {
+            (root || document).querySelectorAll('input.cell-input').forEach(autosizeInput);
+        }
+
+        function initAutosize() {
+            autosizeAll();
+            // พิมพ์แล้วยืดหดทันที
+            document.addEventListener('input', e => autosizeInput(e.target));
+            // แถวใหม่ / ช่องพิมพ์ DESCRIPTION เอง ที่สร้างขึ้นภายหลัง
+            const observer = new MutationObserver(muts => {
+                muts.forEach(m => m.addedNodes.forEach(node => {
+                    if (node.nodeType !== 1) return;
+                    if (node.matches && node.matches('input.cell-input')) autosizeInput(node);
+                    else autosizeAll(node);
+                }));
+            });
+            ['userTbody', 'resultTbody'].forEach(id =>
+                observer.observe(document.getElementById(id), { childList: true, subtree: true }));
+            // วัดใหม่เมื่อฟอนต์โหลดเสร็จ (ความกว้างตัวอักษรเปลี่ยน)
+            if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => autosizeAll());
+        }
+
+        // ===== เกณฑ์โหลดห้องชุดประเภทสำนักงานหรือร้านค้าทั่วไป (วสท.) — ทุกขนาด =====
+        // ไม่มีระบบทำความเย็นจากส่วนกลาง: L = 155 × A
+        // มีระบบทำความเย็นจากส่วนกลาง:   L = 85 × A
+        // L = โหลด (VA), A = พื้นที่ (m²) · ร้านค้าและสำนักงานใช้สูตรเดียวกัน
+        function eitInputs() {
+            const area = parseFloat(document.getElementById('roomArea').value);
+            const cooling = document.querySelector('input[name="centralCooling"]:checked');
+            const method = document.querySelector('input[name="calcMethod"]:checked');
+            return {
+                area: area > 0 ? area : null,
+                cooling: cooling ? cooling.value : null,          // 'yes' | 'no' | null
+                method: method ? method.value : 'circuit'          // 'circuit' | 'area'
+            };
+        }
+
+        function eitMinLoad(area, cooling) {
+            if (!area || !cooling) return null;
+            const k = cooling === 'yes' ? 85 : 155;
+            return { k, c: 0, range: 'ห้องชุดประเภทสำนักงานหรือร้านค้าทั่วไป ทุกขนาด', value: Math.round(k * area) };
+        }
+
+        // ผลรวม VA ของวงจรย่อยทุกวงจร
+        function circuitSumVA() {
+            let sum = 0;
+            document.querySelectorAll('#userTbody .circuit-row-user .calculated-va').forEach(td => {
+                sum += parseFloat(td.textContent.replace(/,/g, '')) || 0;
+            });
+            return sum;
+        }
+
+        // โหลดที่ใช้จริงของห้อง
+        // - ตามพื้นที่: ใช้สูตร วสท.
+        // - ตามวงจรย่อย: ผลรวมวงจรย่อย แต่ไม่น้อยกว่าสูตร วสท.
+        function designLoad() {
+            const inp = eitInputs();
+            const min = eitMinLoad(inp.area, inp.cooling);
+            const circuitVA = circuitSumVA();
+            if (inp.method === 'area') {
+                return Object.assign(inp, { min, circuitVA, total: min ? min.value : 0, minApplied: false });
+            }
+            const minApplied = !!min && circuitVA < min.value;
+            return Object.assign(inp, { min, circuitVA, total: minApplied ? min.value : circuitVA, minApplied });
+        }
+
+        function fmtNum(n) {
+            return Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 });
+        }
+
+        function renderEit(d) {
+            const box = document.getElementById('eitResult');
+            if (!box) return;
+            if (!d.min) {
+                const need = [];
+                if (!d.area) need.push('กรอกพื้นที่');
+                if (!d.cooling) need.push('เลือกว่ามีระบบทำความเย็นจากส่วนกลางหรือไม่');
+                box.className = 'eit-result pending';
+                box.innerHTML = `<i class="fa-solid fa-circle-info"></i> ${need.join(' และ ')} เพื่อคำนวณโหลดขั้นต่ำตาม วสท.`
+                    + (d.method === 'area' ? '' : ` · ตอนนี้ผลรวมวงจรย่อย ${fmtNum(d.circuitVA)} VA`);
+                return;
+            }
+            const m = d.min;
+            const formula = `<span class="formula">L = ${m.k} × ${fmtNum(d.area)} = ${fmtNum(m.value)} VA</span>`;
+            const basis = `${m.range} · ${d.cooling === 'yes' ? 'มี' : 'ไม่มี'}ระบบทำความเย็นจากส่วนกลาง`;
+
+            if (d.method === 'area') {
+                box.className = 'eit-result area';
+                box.innerHTML = `<i class="fa-solid fa-ruler-combined"></i> คำนวณตามพื้นที่: ${formula} (${basis})<br>`
+                    + `TOTAL LOAD = <strong>${fmtNum(d.total)} VA</strong> — ไม่ต้องกรอกวงจรย่อย`;
+            } else if (d.minApplied) {
+                box.className = 'eit-result raised';
+                box.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> โหลดขั้นต่ำตาม วสท.: ${formula} (${basis})<br>`
+                    + `ผลรวมวงจรย่อย ${fmtNum(d.circuitVA)} VA ต่ำกว่าเกณฑ์ → ใช้ TOTAL LOAD = <strong>${fmtNum(d.total)} VA</strong>`;
+            } else {
+                box.className = 'eit-result ok';
+                box.innerHTML = `<i class="fa-solid fa-circle-check"></i> โหลดขั้นต่ำตาม วสท.: ${formula} (${basis})<br>`
+                    + `ผลรวมวงจรย่อย ${fmtNum(d.circuitVA)} VA ไม่ต่ำกว่าเกณฑ์ → ใช้ TOTAL LOAD = <strong>${fmtNum(d.total)} VA</strong>`;
+            }
+        }
+
+        // เปลี่ยนพื้นที่ / ระบบทำความเย็น / วิธีคำนวณ
+        function onEitChange() {
+            const { method, area, cooling } = eitInputs();
+            document.body.classList.toggle('area-mode', method === 'area');
+            if (area) document.getElementById('areaField').classList.remove('missing');
+            if (cooling) document.getElementById('coolingField').classList.remove('missing');
+            calculateTotalLoad();
+            if (typeof updatePhases === 'function') updatePhases();
+        }
+
+        // ตรวจว่ากรอกพื้นที่และเลือกระบบทำความเย็นแล้ว (บังคับก่อนบันทึก)
+        function validateEit() {
+            const { area, cooling } = eitInputs();
+            document.getElementById('areaField').classList.toggle('missing', !area);
+            document.getElementById('coolingField').classList.toggle('missing', !cooling);
+            if (!area) {
+                alert('กรุณากรอกพื้นที่ (m²)');
+                document.getElementById('roomArea').focus();
+                return false;
+            }
+            if (!cooling) {
+                alert('กรุณาเลือกว่ามีระบบทำความเย็นจากส่วนกลางหรือไม่');
+                document.getElementById('coolingField').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+            return true;
+        }
+
+        // ดึงพื้นที่ / ระบบทำความเย็น / วิธีคำนวณที่เคยบันทึกไว้
+        function restoreEitSettings() {
+            const { projectId, unit } = getRoomContext();
+            let room = null;
+            try {
+                const data = JSON.parse(localStorage.getItem(`e_condo_data_${projectId}`) || 'null');
+                room = data && findUnit(data, unit);
+            } catch (e) {}
+            const e = (room && room.loadSchedule && room.loadSchedule.eit) || {};
+            const area = e.area || (room && room.area);
+            const cooling = typeof e.centralCooling === 'boolean' ? e.centralCooling : room && room.centralCooling;
+
+            if (area) document.getElementById('roomArea').value = area;
+            if (typeof cooling === 'boolean') {
+                document.querySelector(`input[name="centralCooling"][value="${cooling ? 'yes' : 'no'}"]`).checked = true;
+            }
+            if (e.method === 'area') document.querySelector('input[name="calcMethod"][value="area"]').checked = true;
+            onEitChange();
+        }
+
+        // ===== ขนาดเบรกเกอร์ / สายไฟ / สายดิน (ระบบ 1 เฟส 230 V) =====
+        const VOLT_1PH = 230;
+        const BRANCH_AT = [10, 16, 20, 25, 32, 40, 50, 63];   // เบรกเกอร์ลูกย่อย 1P
+        const MAIN_AT = [16, 20, 32, 40, 50, 63];             // เมนเซอร์กิตเบรกเกอร์
+        const MIN_CABLE = 2.5;                                // ขนาดสายเริ่มต้น (ตร.มม.)
+
+        // ตารางที่ 5-20 ขนาดกระแสสายทองแดงหุ้มฉนวน PVC 70°C อุณหภูมิโดยรอบ 40°C เดินในท่อในอากาศ
+        // คีย์ = กลุ่มการติดตั้ง-จำนวนตัวนำกระแส-ลักษณะตัวนำ (null = ไม่มีค่าในตาราง)
+        const CABLE_SIZES = [1, 1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300, 400, 500];
+        const AMPACITY_5_20 = {
+            '1-2-single': [10, 13, 17, 23, 30, 40, 53, 70, 86, 104, 131, 158, 183, 209, 238, 279, 319, null, null],
+            '1-2-multi':  [10, 12, 16, 22, 28, 37, 50, 65, 80, 96, 121, 145, 167, 191, 216, 253, 291, null, null],
+            '1-3-single': [9, 12, 16, 21, 27, 37, 49, 64, 77, 94, 118, 143, 164, 188, 213, 249, 285, null, null],
+            '1-3-multi':  [9, 11, 15, 20, 25, 34, 45, 59, 72, 86, 109, 131, 150, 171, 194, 227, 259, null, null],
+            '2-2-single': [12, 15, 21, 28, 36, 50, 66, 88, 109, 131, 167, 202, 234, 261, 297, 348, 398, 475, 545],
+            '2-2-multi':  [11, 14, 20, 26, 33, 45, 60, 78, 97, 116, 146, 175, 202, 224, 256, 299, 343, null, null],
+            '2-3-single': [10, 13, 18, 24, 31, 44, 59, 77, 96, 117, 149, 180, 208, 228, 258, 301, 343, 406, 464],
+            '2-3-multi':  [10, 13, 17, 23, 30, 40, 54, 70, 86, 103, 130, 156, 179, 196, 222, 258, 295, null, null]
+        };
+
+        // ตารางที่ 4-2 ขนาดต่ำสุดของสายดิน [พิกัดเครื่องป้องกันไม่เกิน (A), ขนาดสายดิน (ตร.มม.)]
+        const GROUND_4_2 = [
+            [20, 2.5], [40, 4], [70, 6], [100, 10], [200, 16], [400, 25], [500, 35],
+            [800, 50], [1000, 70], [1250, 95], [2000, 120], [2500, 185], [4000, 240], [6000, 400]
+        ];
+
+        function pickBreaker(amp, list) {
+            return list.find(a => a >= amp) || null;
+        }
+
+        // สายเล็กที่สุด (เริ่ม 2.5) ที่รับกระแสได้ไม่น้อยกว่าพิกัดเบรกเกอร์
+        function pickCable(at, group, core, conductors) {
+            const col = AMPACITY_5_20[`${group}-${conductors}-${core}`];
+            if (!col) return null;
+            for (let i = 0; i < CABLE_SIZES.length; i++) {
+                if (CABLE_SIZES[i] < MIN_CABLE || col[i] == null) continue;
+                if (col[i] >= at) return { size: CABLE_SIZES[i], ampacity: col[i] };
+            }
+            return null;
+        }
+
+        function pickGround(at) {
+            const row = GROUND_4_2.find(r => at <= r[0]);
+            return row ? Math.max(row[1], MIN_CABLE) : null;
+        }
+
+        // ===== ขนาดท่อร้อยสาย (ตารางที่ 8.4) =====
+        // จำนวนสูงสุดของสาย 60227 IEC 01 ขนาดเดียวกันในท่อ (พื้นที่สาย 40%) · null = ไม่มีค่าในตาราง
+        const CONDUITS = [
+            { mm: 15, inch: '1/2"' }, { mm: 20, inch: '3/4"' }, { mm: 25, inch: '1"' },
+            { mm: 32, inch: '1 1/4"' }, { mm: 40, inch: '1 1/2"' }, { mm: 50, inch: '2"' },
+            { mm: 65, inch: '2 1/2"' }, { mm: 80, inch: '3"' }, { mm: 90, inch: '3 1/2"' },
+            { mm: 100, inch: '4"' }, { mm: 125, inch: '5"' }, { mm: 150, inch: '6"' }
+        ];
+        const _ = null;
+        const CONDUIT_FILL_8_4 = {
+            //       15  20  25  32  40  50  65  80  90 100 125 150
+            1.5: [   8, 14, 22, 37,  _,  _,  _,  _,  _,  _,  _,  _],
+            2.5: [   5, 10, 15, 25, 39,  _,  _,  _,  _,  _,  _,  _],
+            4:   [   4,  7, 11, 19, 30,  _,  _,  _,  _,  _,  _,  _],
+            6:   [   3,  5,  9, 15, 23, 37,  _,  _,  _,  _,  _,  _],
+            10:  [   1,  3,  5,  9, 14, 22, 37,  _,  _,  _,  _,  _],
+            16:  [   1,  2,  4,  6, 10, 16, 27, 42,  _,  _,  _,  _],
+            25:  [   1,  1,  2,  4,  6, 10, 17, 27, 34,  _,  _,  _],
+            35:  [   1,  1,  1,  3,  5,  8, 14, 21, 27, 33,  _,  _],
+            50:  [   _,  1,  1,  1,  3,  6, 10, 15, 19, 24, 38,  _],
+            70:  [   _,  _,  1,  1,  3,  4,  7, 12, 15, 18, 29, 42],
+            95:  [   _,  _,  1,  1,  1,  3,  5,  8, 11, 13, 21, 30],
+            120: [   _,  _,  _,  1,  1,  2,  4,  7,  9, 11, 17, 25],
+            150: [   _,  _,  _,  1,  1,  1,  3,  5,  7,  9, 14, 20],
+            185: [   _,  _,  _,  1,  1,  1,  3,  4,  6,  7, 11, 16],
+            240: [   _,  _,  _,  _,  1,  1,  1,  3,  4,  5,  8, 12],
+            300: [   _,  _,  _,  _,  _,  1,  1,  2,  3,  4,  7, 10],
+            400: [   _,  _,  _,  _,  _,  1,  1,  1,  2,  3,  5,  8]
+        };
+        const WIRES_1PH = 3;   // ระบบ 1 เฟส: L + N + G = 3 เส้น ทุกวงจร
+
+        // ท่อเล็กที่สุดที่ร้อยสายขนาดนี้ได้ไม่น้อยกว่า n เส้น -> index ใน CONDUITS
+        function pickConduit(cableSize, n) {
+            const row = CONDUIT_FILL_8_4[cableSize];
+            if (!row) return -1;
+            return row.findIndex(max => max != null && max >= n);
+        }
+
+        // dropdown Ø: เฉพาะขนาดท่อที่ไม่เล็กกว่าที่คำนวณได้ (ค่าที่ผู้ใช้เลือกเองเก็บที่ data-chosen)
+        function syncRaceSelect(sel, raceType, cableSize, over) {
+            if (!sel) return;
+            sel.classList.remove('over');
+            if (over || !raceType || !cableSize) {
+                sel.innerHTML = '<option value="">-</option>';
+                sel.title = !raceType ? 'เลือก TYPE ของท่อก่อน' : 'ยังไม่มีขนาดสาย';
+                return;
+            }
+            const idx = pickConduit(cableSize, WIRES_1PH);
+            if (idx < 0) {
+                sel.innerHTML = `<option value='>6"'>>6"</option>`;
+                sel.classList.add('over');
+                sel.title = `สาย ${cableSize} ตร.มม. ${WIRES_1PH} เส้น เกินท่อ 6" ในตาราง 8.4`;
+                return;
+            }
+            const allowed = CONDUITS.slice(idx);
+            const label = c => `${c.inch} (${c.mm} มม.)`;   // แสดงทั้งนิ้วและมิลลิเมตร
+            sel.innerHTML = allowed.map(c => `<option value='${label(c)}'>${label(c)}</option>`).join('');
+            const chosen = sel.dataset.chosen;
+            sel.value = allowed.some(c => label(c) === chosen) ? chosen : label(allowed[0]);
+            const min = CONDUITS[idx];
+            const maxN = CONDUIT_FILL_8_4[cableSize][idx];
+            sel.title = `${raceType}: สาย ${cableSize} ตร.มม. ${WIRES_1PH} เส้น (L, N, G) → ต้องใช้ท่ออย่างน้อย `
+                + `${min.mm} มม. (${min.inch}) ร้อยได้สูงสุด ${maxN} เส้น (ตาราง 8.4)`;
+        }
+
+        // ออกแบบวงจรจากโหลด VA: กระแส -> CB AT -> สาย -> สายดิน
+        // ขนาดสาย / สายดิน จากพิกัดเบรกเกอร์ที่เลือก
+        function sizeByAt(at, group, core) {
+            const cable = pickCable(at, group || '1', core || 'single', 2);
+            const ground = pickGround(at);
+            return { cable, ground, text: cable && ground ? `2-${cable.size},${ground}G` : '' };
+        }
+
+        // dropdown AT: มีเฉพาะขนาดที่ไม่น้อยกว่ากระแสที่ต้องใช้
+        // ค่าที่ผู้ใช้เลือกเองเก็บไว้ที่ data-chosen (ถ้ายังพอกับโหลดจะคงไว้ ถ้าไม่พอจะขยับเป็นขนาดต่ำสุดที่ใช้ได้)
+        // factor: ตัวคูณกระแสก่อนเลือกเบรกเกอร์ (เมนเซอร์กิตเบรกเกอร์ = 1.25 · วงจรย่อยไม่คูณ)
+        function syncAtSelect(sel, list, va, label, factor) {
+            const k = factor || 1;
+            const i0 = va > 0 ? va / VOLT_1PH : 0;
+            const amp = i0 * k;
+            const iText = va > 0
+                ? `I = ${va.toLocaleString()} / ${VOLT_1PH} = ${i0.toFixed(2)} A` + (k !== 1 ? ` × ${k} = ${amp.toFixed(2)} A` : '')
+                : '';
+            const minAt = va > 0 ? pickBreaker(amp, list) : null;
+
+            if (va > 0 && !minAt) {
+                sel.innerHTML = `<option value=">${list[list.length - 1]}">>${list[list.length - 1]}</option>`;
+                sel.classList.add('over');
+                sel.title = `${iText} เกิน${label} ${list[list.length - 1]} A — ควรแบ่งวงจร`;
+                return { over: true };
+            }
+
+            sel.classList.remove('over');
+            const allowed = minAt ? list.filter(at => at >= minAt) : list;
+            const chosen = Number(sel.dataset.chosen);
+            sel.innerHTML = (minAt ? '' : '<option value="">-</option>')
+                + allowed.map(at => `<option value="${at}">${at}</option>`).join('');
+            sel.value = allowed.includes(chosen) ? String(chosen) : (minAt ? String(minAt) : '');
+            sel.title = minAt
+                ? `${iText} → ต้องใช้อย่างน้อย ${minAt} A (เลือกได้ ${allowed[0]}–${allowed[allowed.length - 1]} A)`
+                : 'ยังไม่มีโหลด — เลือก AT ได้ถ้าต้องการ (เช่น วงจร SPARE)';
+            return { at: Number(sel.value) || null };
+        }
+
+        function setAuto(el, value, title, over) {
+            if (!el) return;
+            el.value = value;
+            el.title = title || '';
+            el.classList.toggle('over', !!over);
+            autosizeInput(el);
+        }
+
+        function showSize(sizeEl, at, group, core, over) {
+            if (over) { setAuto(sizeEl, '-', '', true); return null; }
+            if (!at) { setAuto(sizeEl, '', ''); return null; }
+            const r = sizeByAt(at, group, core);
+            setAuto(sizeEl, r.text, r.cable
+                ? `CB ${at} A → สาย ${r.cable.size} ตร.มม. รับกระแส ${r.cable.ampacity} A (ตาราง 5-20) · สายดิน ${r.ground} ตร.มม. (ตาราง 4-2)` : '');
+            return r.cable ? r.cable.size : null;   // ขนาดสายเส้นไฟ ใช้หาขนาดท่อ
+        }
+
+        // เมนเซอร์กิตเบรกเกอร์: กระแสจาก TOTAL VA × 1.25 ก่อนเลือกเบรกเกอร์ (วงจรย่อยไม่คูณ)
+        const MAIN_FACTOR = 1.25;
+
+        // แถววงจรย่อย: AT (เลือกได้) และ SIZE ตาม AT
+        function updateBranchSizing(resultRow, va) {
+            if (!resultRow) return;
+            const pEl = resultRow.querySelector('.cb-p');
+            if (pEl) pEl.value = '1';
+            const sel = resultRow.querySelector('.cb-at');
+            if (!sel) return;
+            const r = syncAtSelect(sel, BRANCH_AT, va, 'เบรกเกอร์ลูกย่อย');
+            const cableSize = showSize(resultRow.querySelector('.cond-size'), r.at,
+                (resultRow.querySelector('.cond-group') || {}).value,
+                (resultRow.querySelector('.cond-core') || {}).value, r.over);
+            syncRaceSelect(resultRow.querySelector('.race-size'),
+                (resultRow.querySelector('.race-type') || {}).value, cableSize, r.over);
+        }
+
+        // เมนเซอร์กิตเบรกเกอร์: ใช้ TOTAL LOAD ของห้อง
+        function updateMainSizing(totalVA) {
+            const pEl = document.getElementById('mainCbP');
+            if (pEl && !pEl.value.trim()) pEl.value = '2';
+            const sel = document.getElementById('mainCbAt');
+            // เมน: กระแสจาก TOTAL VA × 1.25 ก่อนเลือกเบรกเกอร์ แล้วเลือกสายตาม AT
+            const r = syncAtSelect(sel, MAIN_AT, totalVA, 'เมนเซอร์กิตเบรกเกอร์', MAIN_FACTOR);
+            const cableSize = showSize(document.getElementById('mainCondSize'), r.at,
+                document.getElementById('mainCondGroup').value,
+                document.getElementById('mainCondCore').value, r.over);
+            syncRaceSelect(document.getElementById('mainRaceSize'),
+                document.getElementById('mainRaceType').value, cableSize, r.over);
+        }
+
+        function rowVaOf(resultRow) {
+            const idx = Array.from(document.getElementById('resultTbody').children).indexOf(resultRow);
+            const u = document.getElementById('userTbody').children[idx];
+            return u ? parseFloat(u.querySelector('.calculated-va').textContent.replace(/,/g, '')) || 0 : 0;
+        }
+
+        // ผู้ใช้เลือก AT เอง -> จำไว้ แล้วคำนวณขนาดสายใหม่
+        document.addEventListener('change', e => {
+            const t = e.target;
+            if (t.matches('#resultTbody .cb-at')) {
+                t.dataset.chosen = t.value;
+                updateBranchSizing(t.closest('tr'), rowVaOf(t.closest('tr')));
+            } else if (t.id === 'mainCbAt') {
+                t.dataset.chosen = t.value;
+                calculateTotalLoad();
+            }
+        });
+
+        // เปลี่ยนกลุ่มการติดตั้ง / แกน -> คำนวณขนาดสายใหม่
+        document.addEventListener('change', e => {
+            const t = e.target;
+            if (t.matches('#resultTbody .cond-group, #resultTbody .cond-core')) {
+                const row = t.closest('tr');
+                updateBranchSizing(row, rowVaOf(row));
+            } else if (t.id === 'mainCondGroup' || t.id === 'mainCondCore') {
+                calculateTotalLoad();
+            }
+        });
+
+        // เปลี่ยน TYPE ท่อ -> คำนวณ Ø ใหม่ · เลือก Ø เอง -> จำไว้
+        document.addEventListener('change', e => {
+            const t = e.target;
+            if (t.matches('#resultTbody .race-type, #resultTbody .race-size')) {
+                if (t.classList.contains('race-size')) t.dataset.chosen = t.value;
+                const row = t.closest('tr');
+                updateBranchSizing(row, rowVaOf(row));
+            } else if (t.id === 'mainRaceType' || t.id === 'mainRaceSize') {
+                if (t.id === 'mainRaceSize') t.dataset.chosen = t.value;
+                calculateTotalLoad();
+            }
+        });
+
+        const METER_PHASE = 1;   // หน้านี้เป็นระบบ 1 เฟส
+        const METER_KIND = 'office';   // ห้องชุดประเภทสำนักงานหรือร้านค้าทั่วไป
+
+        // ===== มิเตอร์ (METER) แยกตามเขตการไฟฟ้า กฟน. / กฟภ. (ห้ามใช้ตารางปนกัน) =====
+        // เขตการไฟฟ้าเลือกตอนสร้างโปรเจกต์ (index.html) เก็บที่ projectInfo.authority = 'MEA' | 'PEA'
+        // ขนาดมิเตอร์: ตารางตามพื้นที่ (9.6 / 9.7 ห้องชุดพักอาศัย · 9.8 / 9.9 สำนักงานหรือร้านค้าทั่วไป)
+        //              แล้วเช็กกระแสโหลดไม่เกิน "โหลดสูงสุดของเครื่องวัดฯ" ถ้าเกินให้ขยับขึ้น
+        // CB. มิเตอร์: กฟน. ตาราง 10.1 · กฟภ. ตาราง 10.2
+        const UTILITY_NAMES = { MEA: 'กฟน.', PEA: 'กฟภ.' };
+
+        // แถวตาราง: [พื้นที่ไม่เกิน (m²), โหลดสูงสุดของเครื่องวัดฯ (A), ขนาดเครื่องวัดฯ]
+        const METER_AREA_TABLES = {
+            MEA: {
+                residential: {     // ตารางที่ 9.6 (9-1)
+                    table: '9.6',
+                    no:  { 1: [[55, 30, '15(45)'], [150, 75, '30(100)'], [180, 100, '50(150)']],
+                           3: [[180, 30, '15(45)'], [483, 75, '30(100)'], [666, 100, '50(150)'], [1400, 200, '200'], [2866, 400, '400']] },
+                    yes: { 1: [[35, 10, '5(15)'], [180, 30, '15(45)'], [525, 75, '30(100)'], [800, 100, '50(150)']],
+                           3: [[690, 30, '15(45)'], [2475, 75, '30(100)'], [3000, 100, '50(150)'], [6300, 200, '200'], [12900, 400, '400']] }
+                },
+                office: {          // ตารางที่ 9.8 (9-3)
+                    table: '9.8',
+                    no:  { 1: [[40, 30, '15(45)'], [105, 75, '30(100)'], [140, 100, '50(150)']],
+                           3: [[125, 30, '15(45)'], [320, 75, '30(100)'], [425, 100, '50(150)'], [850, 200, '200'], [1700, 400, '400']] },
+                    yes: { 1: [[80, 30, '15(45)'], [190, 75, '30(100)'], [260, 100, '50(150)']],
+                           3: [[230, 30, '15(45)'], [580, 75, '30(100)'], [770, 100, '50(150)'], [1550, 200, '200'], [3100, 400, '400']] }
+                }
+            },
+            PEA: {
+                residential: {     // ตารางที่ 9.7 (9-2)
+                    table: '9.7',
+                    no:  { 1: [[55, 36, '15(45)'], [150, 80, '30(100)']],
+                           3: [[180, 36, '15(45)'], [483, 80, '30(100)']] },
+                    yes: { 1: [[35, 12, '5(15)'], [180, 36, '15(45)'], [525, 80, '30(100)']],
+                           3: [[690, 36, '15(45)'], [2475, 80, '30(100)']] }
+                },
+                office: {          // ตารางที่ 9.9 (9-4)
+                    table: '9.9',
+                    no:  { 1: [[40, 36, '15(45)'], [105, 80, '30(100)']],
+                           3: [[125, 36, '15(45)'], [320, 80, '30(100)']] },
+                    yes: { 1: [[80, 36, '15(45)'], [190, 80, '30(100)']],
+                           3: [[230, 36, '15(45)'], [580, 80, '30(100)']] }
+                }
+            }
+        };
+
+        // CB. ของมิเตอร์ [พิกัด CB (A), โหลดสูงสุด (A) หรือ null, หมายเหตุ]
+        const METER_CB_TABLES = {
+            MEA: {                 // ตารางที่ 10.1 (3-4) พิกัดสูงสุดของเครื่องป้องกันกระแสเกินและโหลดสูงสุด
+                table: '10.1',
+                '5(15)': [[16, 10]], '15(45)': [[50, 30]], '30(100)': [[100, 75]], '50(150)': [[125, 100]],
+                '200': [[200, 150], [250, 200]],
+                '400': [[300, 250], [400, 300], [500, 400]]
+            },
+            PEA: {                 // ตารางที่ 10.2 (3-5) ขนาดปรับตั้งสูงสุดของเซอร์กิตเบรกเกอร์
+                table: '10.2',
+                '5(15)': [[16, null, 'สายทองแดง 4 ตร.มม.']], '15(45)': [[50, null, 'สายทองแดง 10 ตร.มม.']],
+                '30(100)': [[100, null, 'สายทองแดง 35 ตร.มม.']],
+                '5(100)': [[16, null, 'สายทองแดง 4 ตร.มม.'], [50, null, 'สายทองแดง 10 ตร.มม.'], [100, null, 'สายทองแดง 35 ตร.มม.']],
+                '200 CT': [[125, null, 'สายทองแดง 35 ตร.มม.'], [160, null, 'สายทองแดง 50 ตร.มม.'], [200, null, 'สายทองแดง 70 ตร.มม.']]
+            }
+        };
+
+        // มิเตอร์ที่เลือกเพิ่มเองได้ แต่ไม่มีในตารางตามพื้นที่ (กฟภ. ตาราง 10.2: ชนิดอิเล็กทรอนิกส์)
+        const METER_EXTRA = { MEA: { 1: [], 3: [] }, PEA: { 1: ['5(100)'], 3: ['5(100)', '200 CT'] } };
+
+        // ===== ร้านค้า / สำนักงาน: ชื่อตารางตามเล่มที่ใช้ =====
+        // กฟน.: ขนาดมิเตอร์ ตาราง 9-3 · CB. ตาราง 3-4   |   กฟภ.: ขนาดมิเตอร์ ตาราง 9-4 · CB. ตาราง 3-5
+        METER_AREA_TABLES.MEA.office.table = '9-3';
+        METER_CB_TABLES.MEA.table = '3-4';
+        METER_CB_TABLES.PEA.table = '3-5';
+
+        // ตารางที่ 9-4 ขนาดเครื่องวัดฯ สำหรับห้องชุดประเภทสำนักงานหรือร้านค้าทั่วไป (กฟภ.)
+        // แถว: [พื้นที่ไม่เกิน (m²), พิกัดสูงสุดของเครื่องป้องกันกระแสเกิน (A), มิเตอร์จานหมุน, มิเตอร์อิเล็กทรอนิกส์]
+        const PEA_OFFICE_9_4 = {
+            no:  { 1: [[40, 50, '15(45)', '5(100)'], [105, 100, '30(100)', '5(100)']],
+                   3: [[125, 50, '15(45)', '5(100)'], [320, 100, '30(100)', '5(100)'], [425, 125, null, '200 CT'], [850, 200, null, '200 CT']] },
+            yes: { 1: [[80, 50, '15(45)', '5(100)'], [190, 100, '30(100)', '5(100)']],
+                   3: [[230, 50, '15(45)', '5(100)'], [580, 100, '30(100)', '5(100)'], [770, 125, null, '200 CT'], [1550, 200, null, '200 CT']] }
+        };
+        const METER_TYPE_NAMES = { mech: 'จานหมุน', elec: 'อิเล็กทรอนิกส์' };
+
+        // กฟภ. + ร้านค้า/สำนักงาน: เลือกตามตาราง 9-4 (พื้นที่ + กระแสโหลดไม่เกินพิกัดสูงสุดของเครื่องป้องกันฯ)
+        // แล้วเลือก CB. จากตาราง 3-5 ไม่เกินพิกัดสูงสุดของแถวนั้น
+        function updateMeterPeaOffice(d, cur, sizeSel, cbSel) {
+            const rows = PEA_OFFICE_9_4[d.cooling === 'yes' ? 'yes' : 'no'][METER_PHASE] || [];
+            const byArea = rows.findIndex(r => d.area <= r[0]);
+            const byLoad = rows.findIndex(r => cur.amp <= r[1]);
+            const tbl = 'ตาราง 9-4 (กฟภ.)';
+            if (byArea < 0 || byLoad < 0) {
+                const msg = `${byArea < 0 ? `พื้นที่ ${d.area} m²` : `กระแสโหลด ${cur.amp.toFixed(2)} A`} เกิน${tbl} — กำหนดขนาดเครื่องวัดฯ เป็นรายๆ ไป`;
+                sizeSel.innerHTML = '<option value="">-</option>';
+                cbSel.innerHTML = '<option value="">-</option>';
+                sizeSel.title = msg; cbSel.title = '';
+                sizeSel.classList.add('over');
+                lastMeter = { utility: 'PEA', size: '', cb: '', basis: msg };
+                return;
+            }
+            const minIdx = Math.max(byArea, byLoad);
+            // ตัวเลือก: แต่ละแถวตั้งแต่ minIdx · จานหมุนก่อน แล้วอิเล็กทรอนิกส์ (มิเตอร์ซ้ำใช้แถวแรกที่พบ)
+            const opts = [];
+            rows.slice(minIdx).forEach((r, k) => {
+                [['mech', r[2]], ['elec', r[3]]].forEach(([type, m]) => {
+                    if (m && !opts.some(o => o.meter === m)) opts.push({ meter: m, type, row: rows[minIdx + k] });
+                });
+            });
+            const label = o => meterLabel(o.meter, METER_PHASE);
+            const want = sizeSel.dataset.chosen;
+            sizeSel.innerHTML = opts.map(o => `<option value="${label(o)}">${label(o)} · ${METER_TYPE_NAMES[o.type]}</option>`).join('');
+            const pick = opts.find(o => label(o) === want) || opts[0];
+            sizeSel.value = label(pick);
+            const base = rows[minIdx];
+            sizeSel.title = `${tbl}: พื้นที่ ${d.area} m² → แถวพื้นที่ไม่เกิน ${rows[byArea][0]} m² (CB สูงสุด ${rows[byArea][1]} A)`
+                + (byLoad > byArea ? ` · กระแสโหลด ${cur.amp.toFixed(2)} A เกิน ${rows[byArea][1]} A → ใช้แถว ${base[0]} m² (CB สูงสุด ${base[1]} A)`
+                                   : ` · กระแสโหลด ${cur.amp.toFixed(2)} A ไม่เกิน ${base[1]} A`)
+                + ` · มิเตอร์ ${METER_TYPE_NAMES[pick.type]}`;
+
+            // CB.: ตาราง 3-5 ของมิเตอร์นั้น ไม่เกินพิกัดสูงสุดของแถวในตาราง 9-4 และไม่น้อยกว่ากระแสโหลด
+            const all = METER_CB_TABLES.PEA[pick.meter] || [];
+            let cbRows = all.filter(r => r[0] <= pick.row[1] && r[0] >= cur.amp);
+            if (!cbRows.length) cbRows = all.filter(r => r[0] <= pick.row[1]);
+            if (!cbRows.length) cbRows = all;
+            const wantCb = cbSel.dataset.chosen;
+            cbSel.innerHTML = cbRows.map(r => `<option value="${r[0]}">${r[0]}</option>`).join('');
+            cbSel.value = cbRows.some(r => String(r[0]) === wantCb) ? wantCb : String(cbRows[cbRows.length - 1][0]);
+            const sel = cbRows.find(r => String(r[0]) === cbSel.value);
+            cbSel.title = `CB. ของมิเตอร์ ${label(pick)} = ${sel[0]} A (ตาราง 3-5 (กฟภ.)${sel[2] ? `, ${sel[2]}` : ''})`
+                + ` · ไม่เกินพิกัดสูงสุด ${pick.row[1]} A ตาราง 9-4`
+                + (cbRows.length > 1 ? ` · เลือกได้ ${cbRows.map(r => r[0]).join(' / ')} A` : '');
+            lastMeter = { utility: 'PEA', size: sizeSel.value, cb: cbSel.value, meterType: pick.type, basis: sizeSel.title,
+                          cbTable: 'ตาราง 3-5 (กฟภ.)', loadA: Number(cur.amp.toFixed(2)) };
+        }
+
+        function meterLabel(size, phase) {
+            if (size === '200 CT') return '200 A 3P (CT)';
+            return `${size} A ${phase === 3 ? '3P' : '1P'}`;
+        }
+
+        // อ่านเขตการไฟฟ้าของโปรเจกต์ (ค่าเดียวกับที่หน้าแรกแสดง: ไม่ใช่ PEA = กฟน.)
+        function projectUtility() {
+            try {
+                const { projectId } = getRoomContext();
+                const data = JSON.parse(localStorage.getItem(`e_condo_data_${projectId}`) || 'null');
+                let a = data && data.projectInfo && data.projectInfo.authority;
+                if (!a) {
+                    const list = JSON.parse(localStorage.getItem('e_condo_projects') || '[]');
+                    const p = list.find(x => x.id === projectId);
+                    a = p && p.authority;
+                }
+                return a === 'PEA' ? 'PEA' : 'MEA';
+            } catch (e) { return 'MEA'; }
+        }
+
+        // กระแสโหลดของห้อง: 1P = VA / 230 · 3P = VA / (√3 × 400) แต่ไม่น้อยกว่าเฟสที่โหลดมากที่สุด / 230
+        function meterLoadCurrent(totalVA) {
+            if (!(totalVA > 0)) return { amp: 0, text: '' };
+            if (METER_PHASE !== 3) return { amp: totalVA / 230, text: `I = ${totalVA.toLocaleString()} / 230 = ${(totalVA / 230).toFixed(2)} A` };
+            const bal = totalVA / (Math.sqrt(3) * 400);
+            let text = `I = ${totalVA.toLocaleString()} / (√3 × 400) = ${bal.toFixed(2)} A`;
+            let amp = bal;
+            if (typeof computePhases === 'function') {
+                const raw = computePhases().totals;
+                const ph = typeof designPhaseTotals === 'function' ? designPhaseTotals(raw) : raw;
+                const k = ['A', 'B', 'C'].reduce((a, x) => (ph[x] > ph[a] ? x : a), 'A');
+                const iPh = ph[k] / 230;
+                if (iPh > bal + 0.005) { amp = iPh; text += ` · เฟส ${k} ${Math.round(ph[k]).toLocaleString()} / 230 = ${iPh.toFixed(2)} A`; }
+            }
+            return { amp, text };
+        }
+
+        let lastMeter = null;
+
+        function updateMeter() {
+            const sizeSel = document.getElementById('meterSize');
+            const cbSel = document.getElementById('meterCb');
+            if (!sizeSel || !cbSel) return;
+            const none = (msg) => {
+                sizeSel.innerHTML = '<option value="">-</option>';
+                cbSel.innerHTML = '<option value="">-</option>';
+                sizeSel.title = msg; cbSel.title = '';
+                sizeSel.classList.add('over');
+                lastMeter = null;
+            };
+            sizeSel.classList.remove('over');
+
+            const utility = projectUtility();
+            const d = designLoad();
+            if (!d.area || !d.cooling) { none('กรอกพื้นที่และเลือกระบบทำความเย็นจากส่วนกลางก่อน'); return; }
+
+            if (utility === 'PEA' && METER_KIND === 'office') { updateMeterPeaOffice(d, meterLoadCurrent(d.total), sizeSel, cbSel); return; }
+            const set = METER_AREA_TABLES[utility][METER_KIND];
+            const rows = set[d.cooling === 'yes' ? 'yes' : 'no'][METER_PHASE] || [];
+            const cur = meterLoadCurrent(d.total);
+            const byArea = rows.findIndex(r => d.area <= r[0]);
+            const byLoad = rows.findIndex(r => cur.amp <= r[1]);
+            const uName = UTILITY_NAMES[utility];
+            const tbl = `ตาราง ${set.table} (${uName})`;
+
+            let options, minIdx = -1, basis;
+            if (byArea >= 0 && byLoad >= 0) {
+                minIdx = Math.max(byArea, byLoad);
+                options = rows.slice(minIdx).map(r => r[2]).concat(METER_EXTRA[utility][METER_PHASE]);
+                const r = rows[minIdx];
+                basis = `${tbl}: พื้นที่ ${d.area} m² → ${meterLabel(rows[byArea][2], METER_PHASE)}`
+                    + (byLoad > byArea ? ` · กระแสโหลด ${cur.amp.toFixed(2)} A เกินโหลดสูงสุด ${rows[byArea][1]} A → ขยับเป็น ${meterLabel(r[2], METER_PHASE)} (โหลดสูงสุด ${r[1]} A)`
+                                       : ` · กระแสโหลด ${cur.amp.toFixed(2)} A ไม่เกินโหลดสูงสุด ${r[1]} A`);
+            } else {
+                // เกินตาราง: กำหนดขนาดเครื่องวัดฯ เป็นรายๆ ไป (เลือกเองได้เฉพาะมิเตอร์ที่มีในตาราง CB ของเขตนั้น)
+                options = METER_EXTRA[utility][METER_PHASE].slice();
+                basis = `${byArea < 0 ? `พื้นที่ ${d.area} m²` : `กระแสโหลด ${cur.amp.toFixed(2)} A`} เกิน${tbl} — กำหนดขนาดเครื่องวัดฯ เป็นรายๆ ไป`;
+                if (!options.length) { none(basis); return; }
+                sizeSel.classList.add('over');
+            }
+
+            const want = sizeSel.dataset.chosen;
+            sizeSel.innerHTML = (minIdx < 0 ? '<option value="">-</option>' : '')
+                + options.map(s => `<option value="${meterLabel(s, METER_PHASE)}">${meterLabel(s, METER_PHASE)}</option>`).join('');
+            sizeSel.value = options.some(s => meterLabel(s, METER_PHASE) === want) ? want : (minIdx < 0 ? '' : meterLabel(options[0], METER_PHASE));
+            sizeSel.title = basis;
+            const size = options.find(s => meterLabel(s, METER_PHASE) === sizeSel.value);
+
+            if (!size) {
+                cbSel.innerHTML = '<option value="">-</option>'; cbSel.title = '';
+                lastMeter = { utility, size: '', cb: '', basis };
+                return;
+            }
+            const cbRows = METER_CB_TABLES[utility][size] || [];
+            const cbTbl = `ตาราง ${METER_CB_TABLES[utility].table} (${uName})`;
+            // ค่าตั้งต้น: กฟน. = ค่าน้อยสุดที่โหลดสูงสุดไม่น้อยกว่ากระแสโหลด · กฟภ. = ค่าน้อยสุดที่ไม่น้อยกว่า 1.25 × กระแสโหลด
+            let def = cbRows.find(r => (r[1] != null ? r[1] >= cur.amp : r[0] >= 1.25 * cur.amp)) || cbRows[cbRows.length - 1];
+            const wantCb = cbSel.dataset.chosen;
+            cbSel.innerHTML = cbRows.map(r => `<option value="${r[0]}">${r[0]}</option>`).join('');
+            cbSel.value = cbRows.some(r => String(r[0]) === wantCb) ? wantCb : String(def[0]);
+            const sel = cbRows.find(r => String(r[0]) === cbSel.value);
+            cbSel.title = `CB. ของมิเตอร์ ${meterLabel(size, METER_PHASE)} = ${sel[0]} A (${cbTbl}`
+                + (sel[1] != null ? `, โหลดสูงสุด ${sel[1]} A` : '') + (sel[2] ? `, ${sel[2]}` : '') + ')'
+                + (cbRows.length > 1 ? ` · เลือกได้ ${cbRows.map(r => r[0]).join(' / ')} A` : '');
+            lastMeter = { utility, size: sizeSel.value, cb: cbSel.value, basis, cbTable: cbTbl, loadA: Number(cur.amp.toFixed(2)) };
+        }
+
+        function meterData() {
+            const sizeSel = document.getElementById('meterSize');
+            const cbSel = document.getElementById('meterCb');
+            return Object.assign({ utility: projectUtility() }, lastMeter || {}, {
+                size: sizeSel.value,
+                cb: cbSel.value,
+                sizeManual: !!sizeSel.dataset.chosen,
+                cbManual: !!cbSel.dataset.chosen
+            });
+        }
+
+        // คำนวณโหลดใหม่เมื่อไร -> คำนวณมิเตอร์ต่อทันที
+        const _calculateTotalLoadNoMeter = calculateTotalLoad;
+        calculateTotalLoad = function () {
+            _calculateTotalLoadNoMeter.apply(this, arguments);
+            updateMeter();
+        };
+
+        // ผู้ใช้เลือกขนาดมิเตอร์ / CB. มิเตอร์เอง -> จำไว้
+        document.addEventListener('change', e => {
+            const t = e.target;
+            if (t.id === 'meterSize') {
+                t.dataset.chosen = t.value;
+                delete document.getElementById('meterCb').dataset.chosen;
+                updateMeter();
+            } else if (t.id === 'meterCb') {
+                t.dataset.chosen = t.value;
+                updateMeter();
+            }
+        });
+
+        // ดึงมิเตอร์ที่เคยบันทึกไว้ (หลังโหลดตารางเดิมเสร็จ)
+        window.addEventListener('load', () => {
+            const ctx = getRoomContext();
+            let rec = null;
+            try {
+                const data = JSON.parse(localStorage.getItem(`e_condo_data_${ctx.projectId}`) || 'null');
+                rec = ctx.unit ? findUnit(data, ctx.unit) : data && (data.rooms || []).find(r => r.type === ctx.type);
+            } catch (e) {}
+            const m = rec && rec.loadSchedule && rec.loadSchedule.meter;
+            if (m && m.utility === projectUtility()) {   // เปลี่ยนเขตการไฟฟ้าแล้ว ไม่ใช้ค่าเดิม
+                if (m.sizeManual && m.size) document.getElementById('meterSize').dataset.chosen = m.size;
+                if (m.cbManual && m.cb) document.getElementById('meterCb').dataset.chosen = m.cb;
+            }
+            const u = projectUtility();
+            const tag = document.getElementById('meterUtility');
+            if (tag) tag.textContent = `เขต ${UTILITY_NAMES[u]}`;
+            updateMeter();
+        });
+
+        // ===== ปุ่มลัดไปหน้าสรุปผล =====
+        let hasUnsavedChanges = false;
+        document.addEventListener('input', e => { if (!e.target.closest('#unitCountPanel')) hasUnsavedChanges = true; });
+        document.addEventListener('change', e => { if (!e.target.closest('#unitCountPanel')) hasUnsavedChanges = true; });
+
+        function setSummaryLink() {
+            const link = document.getElementById('summaryLink');
+            const { projectId } = getRoomContext();
+            if (projectId) {
+                link.href = `../condo/condo-page-2.html?projectId=${encodeURIComponent(projectId)}`;
+            }
+            // เตือนก่อนออกจากหน้า ถ้ามีการแก้ไขที่ยังไม่ได้กด "บันทึกตารางโหลด"
+            link.addEventListener('click', e => {
+                if (hasUnsavedChanges &&
+                    !confirm('ข้อมูลที่แก้ไขยังไม่ได้บันทึก\nกด "บันทึกตารางโหลด" ก่อนเพื่อบันทึก\n\nต้องการไปหน้าสรุปผลโดยไม่บันทึกหรือไม่?')) {
+                    e.preventDefault();
+                }
+            });
+        }
+
+        // ===== ดึงตารางโหลดที่เคยบันทึกไว้กลับมาใส่ในช่องกรอก =====
+        function setField(row, selector, value) {
+            const el = row.querySelector(selector);
+            if (!el || value === undefined || value === null) return;
+            el.value = value;
+            // ถ้าค่าที่บันทึกไว้ไม่มีในตัวเลือกของ dropdown ให้คงค่าเดิมของช่องไว้
+            if (el.tagName === 'SELECT' && el.value !== String(value)) {
+                el.selectedIndex = 0;
+            }
+        }
+
+        function setDescription(userRow, text) {
+            if (!text) return;
+            const container = userRow.querySelector('.desc-container');
+            const select = container.querySelector('select');
+            const isPreset = select && Array.from(select.options)
+                .some(o => o.value === text && o.value !== 'ผู้ใช้กำหนดเอง');
+
+            if (isPreset) {
+                select.value = text;
+            } else {
+                // DESCRIPTION ที่ผู้ใช้พิมพ์เอง
+                container.innerHTML = `
+                    <input type="text" class="cell-input custom-desc"
+                           placeholder="พิมพ์ระบุโหลด..." onblur="checkCustomDescEmpty(this)" />
+                `;
+                container.querySelector('input').value = text;
+            }
+        }
+
+        function restoreLoadSchedule() {
+            const { projectId, unit } = getRoomContext();
+            if (!projectId || !unit) return;
+
+            let data = null;
+            try { data = JSON.parse(localStorage.getItem(`e_condo_data_${projectId}`) || 'null'); } catch (e) {}
+            const room = data && findUnit(data, unit);
+            const ls = room && room.loadSchedule;
+            if (!ls || !Array.isArray(ls.circuits)) return;   // คำนวณตามพื้นที่ = circuits ว่าง
+
+            // สร้างแถวให้พอกับจำนวนวงจรที่บันทึกไว้
+            const userTbody = document.getElementById('userTbody');
+            while (userTbody.children.length < ls.circuits.length) addRow();
+
+            const userRows = document.querySelectorAll('#userTbody .circuit-row-user');
+            const resultRows = document.querySelectorAll('#resultTbody .circuit-row-result');
+
+            ls.circuits.forEach((c, i) => {
+                const u = userRows[i];
+                const r = resultRows[i];
+                if (!u || !r) return;
+
+                setDescription(u, c.description);
+
+                // โหมดกรอก: VA โดยตรง หรือ WATT + PF
+                const vaInput = u.querySelector('.direct-va');
+                const wattInput = u.querySelector('.watt-input');
+                const directVA = c.directVA !== undefined
+                    ? c.directVA
+                    : (!c.watt && c.loadVA ? String(c.loadVA) : '');   // ข้อมูลรุ่นเก่าที่ยังไม่มี directVA
+
+                if (c.watt) {
+                    wattInput.value = c.watt;
+                    setField(u, '.pf-select', c.pf);
+                    handleInputMode(wattInput, 'watt');
+                } else if (directVA) {
+                    vaInput.value = directVA;
+                    handleInputMode(vaInput, 'va');
+                }
+
+                // CB TYPE: ถ้าเคยเลือกเองใช้ค่าเดิม ไม่เช่นนั้นตั้งตาม DESCRIPTION
+                if (c.cbTypeManual) {
+                    setField(u, '.cb-type-select', c.cbType);
+                    u.querySelector('.cb-type-select').dataset.manual = '1';
+                } else {
+                    autoCbType(u);
+                }
+                setField(r, '.cb-p', c.cbPole);
+                const atSel = r.querySelector('.cb-at');
+                if (atSel && c.cbAtManual && c.cbAT) atSel.dataset.chosen = c.cbAT;
+                setField(r, '.cond-type', c.conductorType);
+                setField(r, '.cond-core', c.conductorCore);
+                setField(r, '.cond-group', c.installGroup);
+                setField(r, '.cond-size', c.conductorSize);
+                setField(r, '.race-type', c.racewayType);
+                const raceSel = r.querySelector('.race-size');
+                if (raceSel && c.racewaySizeManual && c.racewaySize) raceSel.dataset.chosen = c.racewaySize;
+            });
+
+            const m = ls.main || {};
+            const mainFields = {
+                mainCbType: m.cbType, mainCbP: m.cbPole,
+                mainCondType: m.conductorType, mainCondCore: m.conductorCore, mainCondGroup: m.installGroup,
+                mainCondSize: m.conductorSize, mainRaceType: m.racewayType
+            };
+            if (m.racewaySizeManual && m.racewaySize) document.getElementById('mainRaceSize').dataset.chosen = m.racewaySize;
+            if (m.cbAtManual && m.cbAT) document.getElementById('mainCbAt').dataset.chosen = m.cbAT;
+            Object.entries(mainFields).forEach(([id, value]) => {
+                const el = document.getElementById(id);
+                if (el && value !== undefined && value !== null) {
+                    el.value = value;
+                    if (el.tagName === 'SELECT' && el.value !== String(value)) el.selectedIndex = 0;
+                }
+            });
+
+            // แจ้งว่ากำลังแก้ไขข้อมูลเดิม
+            const info = document.getElementById('restoreNote');
+            if (info && ls.savedAt) {
+                info.innerHTML = `<div class="restore-note"><i class="fa-solid fa-clock-rotate-left"></i> โหลดข้อมูลเดิมแล้ว (บันทึกล่าสุด ${new Date(ls.savedAt).toLocaleString('th-TH')}) — แก้ไขแล้วกด "บันทึกตารางโหลด" เพื่อบันทึกทับ</div>`;
+            }
+        }
+
+        // หา projectId และ TYPE ที่กำลังทำ (จาก URL ก่อน ถ้าไม่มีใช้ค่าล่าสุดจาก condo-page-1)
+        function getRoomContext() {
+            const params = new URLSearchParams(window.location.search);
+            let current = {};
+            try { current = JSON.parse(localStorage.getItem('e_condo_current_shop') || '{}'); } catch (e) {}
+            return {
+                projectId: params.get('projectId') || current.projectId,
+                unit: params.get('unit') || current.unit
+            };
+        }
+
+        // ร้านค้า / สำนักงานใน data.shopOffices
+        const KIND_NAMES = { shop: 'ร้านค้า', office: 'สำนักงาน' };
+        function findUnit(data, unit) {
+            return data && Array.isArray(data.shopOffices) ? data.shopOffices.find(u => u.id === unit) || null : null;
+        }
+
+        // ข้อความ DESCRIPTION ของแถว (dropdown หรือช่องพิมพ์เอง)
+        function getRowDescription(userRow) {
+            const container = userRow.querySelector('.desc-container');
+            const field = container.querySelector('select, input');
+            return field ? field.value.trim() : '';
+        }
+
+        function cellValue(row, selector) {
+            const el = row.querySelector(selector);
+            return el ? el.value.trim() : '';
+        }
+
+        // แจ้งบันทึกสำเร็จ พร้อมลิงก์ไปหน้าสรุปผล
+        let toastTimer = null;
+        function showSavedToast(projectId, unit) {
+            const toast = document.getElementById('saveToast');
+            document.getElementById('toastText').textContent = `บันทึกตารางโหลด ${unit.name} แล้ว`;
+            document.getElementById('toastSummaryLink').href =
+                `../condo/condo-page-2.html?projectId=${encodeURIComponent(projectId)}`;
+            toast.hidden = false;
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => { toast.hidden = true; }, 4000);
+        }
+
+        // บันทึกตารางลง data.shopOffices[].loadSchedule
+        function createLoadSchedule() {
+            const { projectId, unit } = getRoomContext();
+            if (!projectId || !unit) {
+                alert('ไม่พบข้อมูลร้านค้า / สำนักงาน\nกรุณาเปิดหน้านี้จากเมนู "ร้านค้า / สำนักงาน" ในหน้าอาคารชุดที่อยู่อาศัย');
+                return;
+            }
+
+            const key = `e_condo_data_${projectId}`;
+            let data;
+            try { data = JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { data = null; }
+            const room = data && findUnit(data, unit);
+            if (!room) {
+                alert('ไม่พบร้านค้า / สำนักงานนี้ในโปรเจกต์\nกรุณากำหนดใหม่จากเมนู "ร้านค้า / สำนักงาน" ในหน้าอาคารชุดที่อยู่อาศัย');
+                return;
+            }
+
+            // บังคับกรอกพื้นที่และเลือกระบบทำความเย็นก่อนบันทึก
+            if (!validateEit()) return;
+            const d = designLoad();
+
+            const userRows = document.querySelectorAll('#userTbody .circuit-row-user');
+            const resultRows = document.querySelectorAll('#resultTbody .circuit-row-result');
+
+            // คำนวณตามพื้นที่: ไม่มีวงจรย่อย
+            const circuits = d.method === 'area' ? [] : Array.from(userRows).map((u, i) => {
+                const r = resultRows[i];
+                const va = parseFloat(u.querySelector('.calculated-va').textContent.replace(/,/g, '')) || 0;
+                return {
+                    no: i + 1,
+                    description: getRowDescription(u),
+                    loadVA: va,
+                    directVA: cellValue(u, '.direct-va'),
+                    watt: cellValue(u, '.watt-input'),
+                    pf: cellValue(u, '.pf-select'),
+                    cbType: cellValue(u, '.cb-type-select'),
+                    cbTypeManual: !!u.querySelector('.cb-type-select').dataset.manual,   // ผู้ใช้เลือก CB TYPE เอง
+                    cbPole: cellValue(r, '.cb-p'),
+                    cbAT: cellValue(r, '.cb-at'),
+                    cbAtManual: !!r.querySelector('.cb-at').dataset.chosen,   // ผู้ใช้เลือก AT เอง
+                    conductorType: cellValue(r, '.cond-type'),
+                    conductorCore: cellValue(r, '.cond-core'),
+                    installGroup: cellValue(r, '.cond-group'),
+                    conductorSize: cellValue(r, '.cond-size'),
+                    racewayType: cellValue(r, '.race-type'),
+                    racewaySize: cellValue(r, '.race-size'),
+                    racewaySizeManual: !!r.querySelector('.race-size').dataset.chosen   // ผู้ใช้เลือก Ø เอง
+                };
+            });
+
+            const empty = circuits.filter(c => !c.description && c.loadVA === 0);
+            if (d.method !== 'area' && empty.length === circuits.length) {
+                alert('ยังไม่มีข้อมูลวงจร กรุณากรอก DESCRIPTION หรือ LOAD อย่างน้อย 1 วงจร');
+                return;
+            }
+
+            room.loadSchedule = {
+                circuits: circuits,
+                totalVA: parseFloat(document.getElementById('totalVaSum').textContent.replace(/,/g, '')) || 0,
+                main: {
+                    cbType: document.getElementById('mainCbType').value,
+                    cbPole: document.getElementById('mainCbP').value.trim(),
+                    cbAT: document.getElementById('mainCbAt').value.trim(),
+                    cbAtManual: !!document.getElementById('mainCbAt').dataset.chosen,
+                    conductorType: document.getElementById('mainCondType').value,
+                    conductorCore: document.getElementById('mainCondCore').value,
+                    installGroup: document.getElementById('mainCondGroup').value,
+                    conductorSize: document.getElementById('mainCondSize').value.trim(),
+                    racewayType: document.getElementById('mainRaceType').value,
+                    racewaySize: document.getElementById('mainRaceSize').value.trim(),
+                    racewaySizeManual: !!document.getElementById('mainRaceSize').dataset.chosen
+                },
+                // เกณฑ์ วสท.: totalVA ข้างบน = โหลดที่ใช้จริง
+                eit: {
+                    method: d.method,                        // 'circuit' | 'area'
+                    kind: 'office',                          // สูตรห้องชุดประเภทสำนักงานหรือร้านค้าทั่วไป
+                    area: d.area,                            // m²
+                    centralCooling: d.cooling === 'yes',
+                    k: d.min.k,                              // 155 หรือ 85
+                    c: 0,
+                    minVA: d.min.value,                      // โหลดขั้นต่ำตามพื้นที่
+                    circuitVA: d.method === 'area' ? 0 : d.circuitVA,
+                    minApplied: d.minApplied                 // true = ใช้ค่าขั้นต่ำแทนผลรวมวงจรย่อย
+                },
+                meter: meterData(),                          // ขนาดมิเตอร์ + CB. มิเตอร์
+                savedAt: new Date().toISOString()
+            };
+            room.updatedAt = room.loadSchedule.savedAt;
+            room.area = d.area;
+            room.centralCooling = d.cooling === 'yes';
+
+            try {
+                localStorage.setItem(key, JSON.stringify(data));
+            } catch (e) {
+                alert('บันทึกข้อมูลไม่สำเร็จ: ' + e.message);
+                return;
+            }
+            hasUnsavedChanges = false;
+
+            showSavedToast(projectId, room);
+        }
+
+        // ===== จำนวนห้องของรายการนี้ (unit.count · ห้องตารางโหลดเดียวกันทุกห้อง) =====
+        function unitCountOf(u) { return Math.max(1, parseInt(u && u.count, 10) || 1); }
+
+        function readUnit() {
+            const { projectId, unit } = getRoomContext();
+            const key = `e_condo_data_${projectId}`;
+            let data = null;
+            try { data = JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) {}
+            return { key, data, u: findUnit(data, unit) };
+        }
+
+        function renderUnitCount() {
+            const { u } = readUnit();
+            const panel = document.getElementById('unitCountPanel');
+            if (!u) { panel.hidden = true; return; }
+            panel.hidden = false;
+            document.getElementById('unitCountName').textContent = `· ${u.name}`;
+            document.getElementById('ucLabel').textContent = `ชั้น ${u.floor} · ${KIND_NAMES[u.kind] || 'ร้านค้า'}ที่ใช้ตารางโหลดนี้`;
+            document.getElementById('ucInput').value = unitCountOf(u);
+            showUnitCountTotal(u, false);
+        }
+
+        function showUnitCountTotal(u, saved, error) {
+            const box = document.getElementById('unitCountTotal');
+            if (error) {
+                box.className = 'eit-result rc-total error';
+                box.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${error}`;
+                return;
+            }
+            const n = unitCountOf(u);
+            const va = parseFloat((document.getElementById('totalVaSum') || {}).textContent ? document.getElementById('totalVaSum').textContent.replace(/,/g, '') : '0') || 0;
+            box.className = 'eit-result rc-total' + (saved ? ' saved' : '');
+            box.innerHTML = `${saved ? '<i class="fa-solid fa-circle-check"></i> บันทึกแล้ว · ' : ''}`
+                + `${String(u.name).replace(/&/g, '&amp;').replace(/</g, '&lt;')} มี <strong>${n.toLocaleString()}</strong> ห้อง (ทุกห้องใช้ตารางโหลดนี้)`
+                + (va > 0 ? ` · โหลดรวม ${n.toLocaleString()} × ${va.toLocaleString()} = <strong>${(n * va).toLocaleString()}</strong> VA` : '')
+                + (saved ? '<br><span style="font-size:0.8rem;color:var(--text-light)">Load Panel ร้านค้า / สำนักงานที่บันทึกไว้แล้ว ต้องเปิดแล้วกดบันทึกใหม่เพื่อใช้จำนวนห้องใหม่</span>' : '');
+        }
+
+        function onUnitCountChange(input) {
+            const val = Number(input.value);
+            const ok = Number.isInteger(val) && val >= 1;
+            document.getElementById('ucField').classList.toggle('missing', !ok);
+            if (!ok) {
+                showUnitCountTotal(null, false, 'จำนวนห้องต้องเป็นจำนวนเต็มตั้งแต่ 1 ขึ้นไป (ยังไม่บันทึก)');
+                return;
+            }
+            const { key, data, u } = readUnit();
+            if (!u) return;
+            u.count = val;
+            u.updatedAt = new Date().toISOString();
+            try { localStorage.setItem(key, JSON.stringify(data)); }
+            catch (e) { showUnitCountTotal(null, false, 'บันทึกไม่สำเร็จ: ' + e.message); return; }
+            showRoomInfo();
+            showUnitCountTotal(u, true);
+        }
+
+        function showRoomInfo() {
+            const box = document.getElementById('roomInfo');
+            const { projectId, unit } = getRoomContext();
+            let data = null;
+            try { data = JSON.parse(localStorage.getItem(`e_condo_data_${projectId}`) || 'null'); } catch (e) {}
+            const u = findUnit(data, unit);
+            if (!u) {
+                box.textContent = 'ไม่พบร้านค้า / สำนักงาน — กรุณาเริ่มจากเมนู "ร้านค้า / สำนักงาน" ในหน้าอาคารชุดที่อยู่อาศัย';
+                return;
+            }
+            const esc = v => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+            const name = data.projectInfo && data.projectInfo.name ? esc(data.projectInfo.name) + ' · ' : '';
+            document.title = `LOAD SCHEDULE ${u.name}`;
+            const cnt = Math.max(1, parseInt(u.count, 10) || 1);
+            box.innerHTML = `${name}<strong>${esc(u.name)}</strong> · ${KIND_NAMES[u.kind] || 'ร้านค้า'} · ชั้น ${u.floor} · ระบบไฟ ${u.phase} เฟส · <strong>${cnt.toLocaleString()}</strong> ห้อง`;
+        }
+    </script>
+</body>
+</html>
